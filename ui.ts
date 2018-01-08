@@ -5,18 +5,33 @@
 class Color {
     constructor(public value: number, public alpha: number = 1.0) {
     }
+    /**
+     * Composante rouge de la couleur
+     */
     get r(): number {
         return this.value >> 16 & 0xFF;
     }
+    /**
+     * Composante verte de la couleur
+     */
     get g(): number {
         return this.value >> 8 & 0xFF;
     }
+    /**
+     * Composante bleue de la couleur
+     */
     get b(): number {
         return this.value & 0xFF;
     }
+    /**
+     * Valeur css sans alpha
+     */
     get rgb(): string {
         return `rgb(${this.r},${this.g},${this.b})`;
     }
+    /**
+     * Valeur css avec alpha
+     */
     get rgba(): string {
         return `rgba(${this.r},${this.g},${this.b},${this.alpha.toFixed(1)})`;
     }
@@ -64,18 +79,6 @@ enum Cursor {
     zoom_in ="zoom-in",
     zoom_out ="zoom-out"
 }
-//============================================================================================================================================================
-//      T E X T  A L I G N (enum) left|right|center|justify|initial|inherit
-//============================================================================================================================================================
-
-enum TextAlign {
-    LEFT = "left",
-    CENTER = "center",
-    RIGHT = "right",
-    JUSTIFY = "justify",
-    INITIAL = "initial",
-    INHERIT = "inherit"  
-}
 
 //============================================================================================================================================================
 //      L I N E  S T Y L E (enum) none|hidden|dotted|dashed|solid|double|groove|ridge|inset|outset|initial|inherit
@@ -113,14 +116,29 @@ enum LineStyle {
 
 class Background {
     col: Color;
+    /**
+     * Arrière-plan uni (couleur, transparence) de zone
+     * @param css feuille de style associée
+     * @param colorVal couleur entre 0x000000 et 0xFFFFFF
+     * @param alphaVal transparence entre 0 (transparent) et 1 (opaque)
+     */
     constructor(public css: CSSStyleDeclaration, colorVal: number, alphaVal: number = 1) {
         this.col = new Color(colorVal, alphaVal);
         this.setValues(colorVal, alphaVal);
     }
+
+    /**
+     * Définition des valeurs en une passe
+     * @param colorVal couleur d'arrière-plan entre 0x000000 et 0xFFFFFF
+     * @param alphaVal transparence d'arrière-plan entre 0 (transparent) et 1 (opaque)
+     */
     setValues(colorVal: number, alphaVal: number = 1) {
         this.color = colorVal;
         this.alpha = alphaVal;
     }
+    /**
+     * Transparence d'arrière-plan entre 0 (transparent) et 1 (opaque)
+     */
     get alpha(): number {
         return this.col.alpha;
     }
@@ -128,6 +146,9 @@ class Background {
         this.col.alpha = value < 0 ? 0 : value > 1 ? 1 : value;
         this.css.backgroundColor = this.col.rgba;
     }
+    /**
+     * Couleur d'arrière-plan entre 0x000000 et 0xFFFFFF
+     */
     get color(): number {
         return this.col.value;
     }
@@ -143,10 +164,27 @@ class Background {
 
 class Border {
     col: Color;
+    /**
+     * Bordure (épaisseur, couleur, transparence, style, rayon) de zone 
+     * @param css  feuille de style associée
+     * @param thickness épaisseur de la bordure en pixels
+     * @param style type de ligne (énumération)
+     * @param colorVal couleur de bordure entre 0x000000 et 0xFFFFFF
+     * @param alphaVal transparence de bordure entre 0 (transparent) et 1 (opaque) 
+     * @param radiusVal arrondi des coins en pixels
+     */
     constructor(public css: CSSStyleDeclaration, thickness: number, style: LineStyle, colorVal: number, alphaVal: number = 1.0, radiusVal: number = 0) {
         this.col = new Color(colorVal, alphaVal);
         this.setValues(thickness, style, colorVal, alphaVal, radiusVal);
     }
+    /**
+     * Définition des paramètres de bordure en une passe
+     * @param thickness Épaisseur de la bordure en pixels
+     * @param style Type de ligne (énumération LineStyle)
+     * @param colorVal Couleur de bordure entre 0x000000 et 0xFFFFFF
+     * @param alphaVal Transparence de bordure entre 0 (transparent) et 1 (opaque) 
+     * @param radiusVal Arrondi des coins en pixels
+     */
     setValues(thickness: number, style: LineStyle, colorVal: number, alphaVal: number = 1.0, radiusVal: number = 0) {
         this.thickness = thickness;
         this.line = style;
@@ -154,6 +192,9 @@ class Border {
         this.alpha = alphaVal;
         this.radius = radiusVal;
     }
+    /**
+     * Transparence de bordure entre 0 (transparent) et 1 (opaque) 
+     */
     get alpha(): number {
         return this.col.alpha;
     }
@@ -162,6 +203,9 @@ class Border {
         this.col.alpha = value;
         this.css.borderColor = this.col.rgba;
     }
+    /**
+     * Couleur de bordure entre 0x000000 et 0xFFFFFF
+     */
     get color(): number {
         return this.col.value;
     }
@@ -169,18 +213,27 @@ class Border {
         this.col.value = value < 0 ? 0 : value > 0xFFFFFF ? 0xFFFFFF : value;
         this.css.borderColor = this.col.rgba;
     }
+    /**
+     * Arrondi des coins en pixels
+     */
     get radius(): number {
         return parseInt(this.css.borderRadius);
     }
     set radius(value: number) {
         this.css.borderRadius = value + "px";
     }
+    /**
+     * Type de ligne (énumération LineStyle)
+     */
     get line(): LineStyle {
         return LineStyle[this.css.borderStyle];
     }
     set line(value: LineStyle) {
         this.css.borderStyle = value;
     }
+    /**
+     * Épaisseur de la bordure en pixels
+     */
     get thickness(): number {
         return parseFloat(this.css.borderWidth);
     }
@@ -195,18 +248,39 @@ class Border {
 
 class Rect {
     values: number[] = [0, 0, 0, 0];
+    /**
+     * Rectangle de délimitation de zone 
+     * @param css feuille de style associée
+     * @param px position horizontale
+     * @param py position verticale
+     * @param w largeur
+     * @param h hauteur
+     */
     constructor(public css: CSSStyleDeclaration, px: number, py: number, w: number = 0, h: number = 0) {
         this.setPos(px, py);
         this.setSize(w, h);
     }
+    /**
+     * Définition de la position
+     * @param px position horizontale
+     * @param py position verticale
+     */
     setPos(px: number, py: number) {
         this.x = px;
         this.y = py;
     }
+    /**
+     * Définition de la taille
+     * @param w largeur
+     * @param h hauteur
+     */
     setSize(w: number, h: number) {
         this.width = w;
         this.height = h;
     }
+    /**
+     * Position horizontale
+     */
     get x(): number {
         return this.values[0];
     }
@@ -214,6 +288,9 @@ class Rect {
         this.values[0] = value;
         this.css.left = `${value}px`;
     }
+    /**
+     * Position verticale
+     */
     get y(): number {
         return this.values[1];
     }
@@ -221,6 +298,9 @@ class Rect {
         this.values[1] = value;
         this.css.top = `${value}px`;
     }
+    /**
+     * Largeur
+     */
     get width(): number {
         return this.values[2];
     }
@@ -228,6 +308,9 @@ class Rect {
         this.values[2] = value;
         this.css.width = `${value}px`;
     }
+    /**
+     * Hauteur
+     */
     get height(): number {
         return this.values[3];
     }
@@ -235,9 +318,31 @@ class Rect {
         this.values[3] = value;
         this.css.height = `${value}px`;
     }
+    /**
+     * Affichage des valeurs du rectangle
+     */
     toString(): string {
         return `(x=${this.x}, y=${this.y})-(w=${this.width}, h=${this.height})`;
     }
+}
+
+//============================================================================================================================================================
+//      T E X T  A L I G N (enum) left|right|center|justify|initial|inherit
+//============================================================================================================================================================
+
+enum TextAlign {
+    /** aligner à gauche */
+    LEFT = "left",
+    /** aligner au centre */
+    CENTER = "center",
+    /** Aligner à droite */
+    RIGHT = "right",
+    /** Répartir le texte sur la largeur */
+    JUSTIFY = "justify",
+    /** Alignement de base */
+    INITIAL = "initial",
+    /** Alignement du parent */
+    INHERIT = "inherit"  
 }
 
 //============================================================================================================================================================
@@ -248,19 +353,26 @@ class TextFormat {
     col: Color;
     css:CSSStyleDeclaration;
     spanCss:CSSStyleDeclaration;
+    /**
+     * Format du texte
+     * @param frame Zone à formater
+     * @param fontName Nom de la police
+     * @param fontSize Taille des caractères en points
+     * @param textColor Couleur du texte entre 0x000000 et 0xFFFFFF
+     * @param textAlign Alignement du texte (énumération TextAlign)
+     */
     constructor(frame:Frame, fontName: string, fontSize: number, textColor: number, textAlign: TextAlign) {
         this.css = frame.div.style;
         this.spanCss = frame.span.style;
         this.col = new Color(textColor, 1.0);
         this.setBaseValues(fontName, fontSize, textColor, textAlign);
     }
-
     /**
-     * Format général
-     * @param fontName Nom de police
-     * @param fontSize Taille de caractère
-     * @param textColor Couleur du texte
-     * @param textAlign alignement du texte (constante)
+     * Format général du texte
+     * @param fontName Nom de la police
+     * @param fontSize Taille des caractères en points
+     * @param textColor Couleur du texte entre 0x000000 et 0xFFFFFF
+     * @param textAlign Alignement du texte (énumération TextAlign)
      */
     setBaseValues(fontName: string, fontSize: number, textColor: number, textAlign: TextAlign):TextFormat {
         this.font = fontName;
@@ -272,33 +384,42 @@ class TextFormat {
     }
 
     /**
-     * Présentation du texte
-     * @param b bold (gras)
-     * @param i italic (en italiques)
-     * @param u underline (souligné)
-     * @param s strike-thru (barré)
+     * Formatage spécifique de présentation
+     * @param b bold (texte en gras)
+     * @param i italic (texte en italiques)
+     * @param u underline (texte souligné)
+     * @param s strike-through (texte barré)
+     * @param sc small caps (petites majuscules)
      */
-    setStyleValues(b:boolean=false, i:boolean=false, u:boolean=false, s:boolean=false):TextFormat {
+    setStyleValues(b:boolean=false, i:boolean=false, u:boolean=false, s:boolean=false, sc:boolean = false):TextFormat {
         this.bold = b;
         this.italic = i;
         this.underline = u;
         this.strikeThrough = s;
-
+        this.smallCaps = sc;
         return this;
     }
-
+    /**
+     * Nom de la police 
+     */
     get font(): string {
         return this.css.fontFamily;
     }
     set font(value: string) {
         this.css.fontFamily = value;
     }
+    /**
+     * Taille des caractères en points
+     */
     get size(): number {
         return parseInt(this.spanCss.fontSize);
     }
     set size(value: number) {
         this.spanCss.fontSize = `${value}pt`;
     }
+    /**
+     * Transparence de la police de caractère
+     */
     get alpha(): number {
         return this.col.alpha;
     }
@@ -306,6 +427,9 @@ class TextFormat {
         this.col.alpha = value;
         this.css.color = this.col.rgba;
     }
+    /**
+     * Couleur du texte entre 0x000000 et 0xFFFFFF
+     */
     get color(): number {
         return this.col.value;
     }
@@ -313,18 +437,27 @@ class TextFormat {
         this.col.value = value;
         this.css.color = this.col.rgba;
     }
+    /**
+     * Mettre le texte en gras ?
+     */
     get bold(): boolean {
         return this.css.fontWeight == "bold";
     }
     set bold(value: boolean) {
         this.css.fontWeight = value ? "bold" : "";
     }
+    /**
+     * Mettre le texte en italiques ?
+     */
     get italic(): boolean {
         return this.css.fontStyle == "italic";
     }
     set italic(value: boolean) {
         this.css.fontSize = value ? "italic" : "";
     }
+    /**
+     * Souligner le texte ?
+     */
     get underline(): boolean {
         return this.css.textDecoration == "underline";
     }
@@ -332,6 +465,9 @@ class TextFormat {
         let prev = this.css.textDecoration.length ? this.css.textDecoration : "";
         this.css.textDecoration = value ? "underline" : prev;
     }
+    /**
+     * Barrer le texte ?
+     */
     get strikeThrough(): boolean {
         return this.css.textDecoration == "line-through";
     }
@@ -339,24 +475,55 @@ class TextFormat {
         let prev = this.css.textDecoration.length ? this.css.textDecoration : "";
         this.css.textDecoration = value ? "line-through" : prev;
     }
+    /**
+     * Mettre en petites majuscules ?
+     */
+    get smallCaps(): boolean {
+        return this.css.fontVariant == "small-caps";
+    }
+    set smallCaps(value: boolean) {
+        this.css.fontVariant = value ? "small-caps" : "";
+    }
+    /**
+     * Alignement du texte (énumération TextAlign)
+     */
     get align(): TextAlign {
         return TextAlign[this.css.textAlign];
     }
     set align(value: TextAlign) {
         this.css.textAlign = value;
     }
+    /**
+     * Espace entre le cadre et le texte à gauche 
+     */
     get marginLeft(): number {
         return parseInt(this.css.paddingLeft);
     }
     set marginLeft(value: number) {
         this.css.paddingLeft = `${value}px`;
     }
+    /**
+     * Espace entre le cadre et le texte à droite
+     */
     get marginRight(): number {
         return parseInt(this.css.paddingRight);
     }
     set marginRight(value: number) {
         this.css.paddingRight = `${value}px`;
     }
+    /**
+     * Espacement (vertical) entre les lignes
+     * Définit la position du texte en hauteur
+     */
+    get leading(): number {
+        return parseInt(this.css.lineHeight);
+    }
+    set leading(value: number) {
+        this.css.lineHeight = `${value}`;
+    }
+    /**
+     * Espacement (horizontal) entre les lettres
+     */
     get letterSpacing(): number {
         return parseInt(this.css.letterSpacing);
     }
@@ -366,20 +533,37 @@ class TextFormat {
 }
 
 //============================================================================================================================================================
-//      E V E N T  L I S T E N E R 
+//      L I S T E N E R 
 //============================================================================================================================================================
 
 class Listener {
+    /**
+     * Ecouteur d'événement
+     * @param f Zone qui écoute l'événement
+     * @param type type de l'événement à écouter
+     * @param callback fonction(frame, event) en réaction à l'événement
+     */
     constructor(public f:Frame, public type:string, public callback:Function) {
         this.listen();
     }
+    /**
+     * Teste la correspondance avec l'écouteur
+     * @param type type à tester
+     * @param callback réaction à l'événement 
+     */
     isListening(type:string, callback:Function):boolean {
         return this.type === type && this.callback === callback;
     }
+    /**
+     * Commence à écouter 
+     */
     listen() {
         let fx = e => this.callback(this.f, e);
         this.f.div.addEventListener(this.type, fx);       
     }
+    /**
+     * Cesse d'écouter et détruit l'écouteur
+     */
     dispose(){
         let fx = e => this.callback(this.f, e);
         this.f.div.removeEventListener(this.type, fx); 
@@ -394,15 +578,25 @@ class Listener {
 //============================================================================================================================================================
 
 class Frame {
+    /** Elément div affiché */
     div: HTMLDivElement;
+    /** Zone contenant le texte dans la div */
+    span:HTMLSpanElement;    
+    /** Déclaration de style de la div */
     css: CSSStyleDeclaration;
+    /** Arrière-plan uni (couleur, alpha) de la zone */
     background: Background;
+    /** Bordure de la zone (couleur, alpha, épaisseur, arrondi) */
     border: Border;
+    /** Position et taille de la zone */
     rect: Rect;
+    /** Format du texte */
     fmt: TextFormat;
-    span:HTMLSpanElement;
+    /** Zone parente de la zone */
     parentFrame: Frame;
+    /** Liste des enfants de la zone */
     children: Frame[] = [];
+    /** Liste des écouteurs de la zone */
     listeners:Listener[] = [];
     /**
      * Zone d'affichage rectangulaire
@@ -682,20 +876,20 @@ class Frame {
         return this;
     }
     /**
-     * 
-     * @param thickness 
-     * @param style 
-     * @param colorVal 
-     * @param alphaVal 
-     * @param radiusVal 
+     * Définit la bordure de la zone
+     * @param thickness Épaisseur de la bordure en pixels
+     * @param style Type de ligne (énumération LineStyle)
+     * @param colorVal Couleur de bordure entre 0x000000 et 0xFFFFFF
+     * @param alphaVal Transparence de bordure entre 0 (transparent) et 1 (opaque) 
+     * @param radiusVal Arrondi des coins en pixels 
      */
     setBorder(thickness: number, style: LineStyle, colorVal: number, alphaVal: number = 1, radiusVal: number = 0): Frame {
         this.border.setValues(thickness, style, colorVal, alphaVal, radiusVal);
         return this;
     }  
     /**
-     * 
-     * @param propVals 
+     * Définit les propriétés css de la div
+     * @param propVals Alternance des noms et valeurs des propriétés à modifier 
      */
     setCss(...propVals): Frame {
         if (this.css != null) {
@@ -706,53 +900,55 @@ class Frame {
         return this;
     }
     /**
-     * 
-     * @param fontName 
-     * @param fontSize 
-     * @param textColor 
-     * @param textAlign 
-     * @param bold 
-     * @param italic 
-     * @param underline 
-     * @param strikeThru 
+     * Format du texte
+     * @param fontName Nom de la police
+     * @param fontSize Taille des caractères en points
+     * @param textColor Couleur du texte entre 0x000000 et 0xFFFFFF
+     * @param textAlign Alignement du texte (énumération TextAlign) 
+     * @param bold texte en gras ?
+     * @param italic texte en italiques ?
+     * @param under underline : texte souligné ?
+     * @param strike strike-through : texte barré ?
+     * @param smallCaps texte en petites majuscules ?
      */
     setTextFormat(fontName: string, fontSize: number, textColor: number, textAlign: TextAlign, 
-        bold:boolean = false, italic:boolean=false, underline:boolean =false, strikeThru:boolean = false): Frame {
+        bold:boolean = false, italic:boolean=false, under:boolean =false, strike:boolean = false, smallCaps:boolean = false): Frame {
         this.fmt.setBaseValues(fontName, fontSize, textColor, textAlign);
-        this.fmt.setStyleValues(bold, italic, underline, strikeThru);
+        this.fmt.setStyleValues(bold, italic, under, strike, smallCaps);
         return this;
     }
     /**
-     * 
-     * @param bold 
-     * @param italic 
-     * @param underline 
-     * @param strikeThru 
+     * Style du texte
+     * @param bold texte en gras ?
+     * @param italic texte en italiques ?
+     * @param under underline : texte souligné ?
+     * @param strike strike-through : texte barré ?
+     * @param smallCaps texte en petites majuscules ?
      */
-    setTextStyle(bold:boolean=false, italic:boolean=false, underline:boolean=false, strikeThru:boolean=false):Frame {
-        this.fmt.setStyleValues(bold, italic, underline, strikeThru);
+    setTextStyle(bold:boolean=false, italic:boolean=false, under:boolean=false, strike:boolean=false, smallCaps:boolean=false):Frame {
+        this.fmt.setStyleValues(bold, italic, under, strike, smallCaps);
         return this;
     }
     /**
-     * 
-     * @param px 
-     * @param py 
+     * Position de la zone
+     * @param px position horizontale gauche
+     * @param py position verticale haut
      */
     setPos(px: number, py: number): Frame {
         this.rect.setPos(px, py);
         return this;
     }
     /**
-     * 
-     * @param width 
-     * @param height 
+     * Taille de la zone
+     * @param width largeur
+     * @param height hauteur
      */
     setSize(width: number, height: number): Frame {
         this.rect.setSize(width, height);
         return this;
     }
     /**
-     * 
+     * Curseur au survol
      */
     get cursor():string {
         return this.css.cursor;
@@ -761,7 +957,7 @@ class Frame {
         this.setCss("cursor", value);
     }
     /**
-     * 
+     * Identifiant de la zone
      */
     get id(): string {
         return this.div.id;
@@ -770,7 +966,7 @@ class Frame {
         this.div.id = value;
     }
     /**
-     * 
+     * Zone parente (null pour enlever)
      */
     get parent(): HTMLElement {
         return this.div.parentElement;
@@ -785,7 +981,7 @@ class Frame {
         }
     }
     /**
-     * 
+     * Le texte doit-il est sélectionnable ?
      */
     get selectable():boolean {
         return (this.css.userSelect == "text");
@@ -795,7 +991,7 @@ class Frame {
         this.setCss("user-select",v,"-moz-user-select", v, "-webkit-user-select", v);
     }
     /**
-     * 
+     * Contenu textuel
      */
     get text():string {
         return this.span.innerHTML;
@@ -804,7 +1000,7 @@ class Frame {
         this.span.innerHTML = value;
     }
     /**
-     * 
+     * Position horizontale gauche
      */
     get left(): number {
         return this.rect.x;
@@ -813,7 +1009,7 @@ class Frame {
         this.rect.x = value;
     }
     /**
-     * 
+     * Position verticale sommet
      */
     get top(): number {
         return this.rect.y;
@@ -822,19 +1018,19 @@ class Frame {
         this.rect.y = value;
     }
     /**
-     * Définit la position à droite (en annulant la position à gauche)
+     * Position horizontale à droite (annule la position à gauche)
      */
     set right(value: number) {
         this.setCss("left", "", "right", value+"px");
     }
     /**
-     * Définit la position du bas (en annulant la position du haut)
+     * Position verticale du bas (annule la position du sommet)
      */
     set bottom(value: number) {
         this.setCss("top", "", "bottom", value+"px");
     }
     /**
-     * 
+     * Largeur de la zone en pixels
      */
     get width(): number {
         return this.rect.width;
@@ -843,7 +1039,7 @@ class Frame {
         this.rect.width = value;
     }
     /**
-     * 
+     * Hauteur de la zone en pixels
      */
     get height(): number {
         return this.rect.height;
@@ -858,11 +1054,25 @@ class Frame {
 //============================================================================================================================================================
 
 class Win extends Frame {
+    /** Zone de titre */
     title:Frame;
+    /** Cadre de redimensionnement en bas à droite */
     sizer:Frame;
+    /** Bouton de fermeture en haut à droite */
     closer:Frame;
-    constructor(idFrame: string, x: number, y: number, w: number, h: number, bgColor: number, borderColor, alphaVal: number = 1.0) {
-        super(idFrame, x, y, w, h,bgColor, alphaVal);
+    /**
+     * 
+     * @param idWin identifiant de la fenêtre
+     * @param x position de la gauche de la fenêtre
+     * @param y position du sommet de la fenêtre
+     * @param w largeur de la fenêtre
+     * @param h hauteur de la fenêtre
+     * @param bgColor couleur d'arrière-plan
+     * @param borderColor couleur de la bordure
+     * @param alphaVal transparence de la fenêtre
+     */
+    constructor(idWin: string, x: number, y: number, w: number, h: number, bgColor: number, borderColor, alphaVal: number = 1.0) {
+        super(idWin, x, y, w, h,bgColor, alphaVal);
         this.setBorder(1, LineStyle.OUTSET, borderColor, alphaVal);
         let title = new Frame("title", 0,0, 10, 24, 0x0000FF, 1.0);
         this.addChild(title);
@@ -871,9 +1081,8 @@ class Win extends Frame {
         title.setCss("width","100%");
         this.title = title;
     }
-
     /**
-     * Définit les options d'affichage et d'utilisation (plus jolies que closable/resizable)
+     * Options d'affichage et d'utilisation (plus jolies que closable/resizable)
      * @param mov La fenêtre peut-elle être déplacée ?
      * @param clos la fenêtre peut-elle être fermée ?
      * @param siz la fenêtre peut-elle être redimensionnée ?
