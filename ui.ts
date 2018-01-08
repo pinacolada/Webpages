@@ -859,7 +859,8 @@ class Frame {
 
 class Win extends Frame {
     title:Frame;
-
+    sizer:Frame;
+    closer:Frame;
     constructor(idFrame: string, x: number, y: number, w: number, h: number, bgColor: number, borderColor, alphaVal: number = 1.0) {
         super(idFrame, x, y, w, h,bgColor, alphaVal);
         this.setBorder(1, LineStyle.OUTSET, borderColor, alphaVal);
@@ -903,25 +904,27 @@ class Win extends Frame {
         
         if(clos) {
             let closer = new Frame("close", 0,0, 20, 20, 0xFFFFFF, 0.3);
-            closer.text = "X";
+            closer.text = "x";
             closer.setTextFormat("calibri", 13, 0xFFFFFF, TextAlign.CENTER, true);
-            closer.setCss("line-height", "16px");
+            closer.setCss("line-height", "14px");
             title.addChild(closer);
             closer.right = 0;
             closer.cursor = Cursor.pointer;
             closer.addEventListener("mouseover", (c:Frame)=> {c.fmt.color = 0xFF0000});
             closer.addEventListener("mouseout", (c:Frame)=> {c.fmt.color = 0xFFFFFF});
-            closer.addEventListener("click", (c:Frame)=> {c.parentFrame.parentFrame.dispose()});   
+            closer.addEventListener("click", (c:Frame)=> {c.parentFrame.parentFrame.dispose()});
+            this.closer = closer;   
         }
 
         if(siz) {
-            let sizer = new Frame("sizer", 0,0, 14, 14, 0x0000FF, 0.2);
+            let sizer = new Frame("sizer", 0,0, 14, 14, 0x000000, 0.2);
             this.addChild(sizer);
             sizer.right = 0; // reste collé à droite... Eh oui :)
             sizer.bottom = 0; // reste collé en bas... Facile non ?
             sizer.cursor = Cursor.nwse_resize;
-            sizer.addEventListener("mouseover", (s:Frame)=> {s.background.alpha = 0.8});
+            sizer.addEventListener("mouseover", (s:Frame)=> {s.background.alpha = 0.5});
             sizer.addEventListener("mouseout", (s:Frame)=> {s.background.alpha = 0.2});
+            this.sizer = sizer;
 
             sizer.addEventListener("mousedown", (sz:Frame, e:MouseEvent) => {
                 let fen:Frame = sz.parentFrame;
@@ -942,6 +945,7 @@ class Win extends Frame {
                     titl.text = previousTitle;
                 }
             });
+            
         }
         return this;
     }

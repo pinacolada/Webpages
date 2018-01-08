@@ -880,24 +880,26 @@ class Win extends Frame {
         }
         if (clos) {
             let closer = new Frame("close", 0, 0, 20, 20, 0xFFFFFF, 0.3);
-            closer.text = "X";
+            closer.text = "x";
             closer.setTextFormat("calibri", 13, 0xFFFFFF, TextAlign.CENTER, true);
-            closer.setCss("line-height", "16px");
+            closer.setCss("line-height", "14px");
             title.addChild(closer);
             closer.right = 0;
             closer.cursor = Cursor.pointer;
             closer.addEventListener("mouseover", (c) => { c.fmt.color = 0xFF0000; });
             closer.addEventListener("mouseout", (c) => { c.fmt.color = 0xFFFFFF; });
             closer.addEventListener("click", (c) => { c.parentFrame.parentFrame.dispose(); });
+            this.closer = closer;
         }
         if (siz) {
-            let sizer = new Frame("sizer", 0, 0, 14, 14, 0x0000FF, 0.2);
+            let sizer = new Frame("sizer", 0, 0, 14, 14, 0x000000, 0.2);
             this.addChild(sizer);
             sizer.right = 0; // reste collé à droite... Eh oui :)
             sizer.bottom = 0; // reste collé en bas... Facile non ?
             sizer.cursor = Cursor.nwse_resize;
-            sizer.addEventListener("mouseover", (s) => { s.background.alpha = 0.8; });
+            sizer.addEventListener("mouseover", (s) => { s.background.alpha = 0.5; });
             sizer.addEventListener("mouseout", (s) => { s.background.alpha = 0.2; });
+            this.sizer = sizer;
             sizer.addEventListener("mousedown", (sz, e) => {
                 let fen = sz.parentFrame;
                 let titl = fen.getChildByName("title");
