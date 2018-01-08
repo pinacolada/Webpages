@@ -1,0 +1,29 @@
+{
+    // Utilisez IntelliSense pour en savoir plus sur les attributs possibles.
+    // Pointez pour afficher la description des attributs existants.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Ouvrir dans Firefox",
+            "type": "firefox",
+            "request": "launch",
+            "reAttach": true,
+            "file": "${workspaceFolder}/index.html"
+        },
+        {
+            "name": "Ouvrir dans Chrome",
+            "type": "chrome",
+            "request": "launch",
+            "file": "${workspaceFolder}/index.html"
+        },
+        {
+            "name": "Lancer Node",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/HelloWorld.ts",
+            "outFiles": [
+                "${workspaceFolder}/HelloWorld.js"
+            ]
+        }
+    ]
+}
