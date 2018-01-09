@@ -598,9 +598,11 @@ class Frame {
     children: Frame[] = [];
     /** Liste des écouteurs de la zone */
     listeners:Listener[] = [];
+     
     /**
      * Zone d'affichage rectangulaire
      * @param idFrame Crée une zone visuelle
+     * @param target Elément HTML parent ou Frame parente
      * @param x gauche
      * @param y haut
      * @param w largeur
@@ -608,9 +610,14 @@ class Frame {
      * @param colorVal couleur de fond
      * @param alphaVal transparence du fond
      */
-    constructor(idFrame: string, x: number, y: number, w: number, h: number, colorVal: number, alphaVal: number = 1.0) {
+    constructor(idFrame: string, target:Frame|HTMLElement, x: number, y: number, w: number, h: number, colorVal: number, alphaVal: number = 1.0) {
         this.div = document.createElement("div");
         this.span = document.createElement("span");
+        if(target instanceof Frame) {
+            target.addChild(this);
+        } else {
+            this.parent = target;
+        }
         this.div.appendChild(this.span);
         this.css = this.div.style;
         this.rect = new Rect(this.css, x, y, w, h);
@@ -680,12 +687,12 @@ class Frame {
         let dh: Frame = this.getChildByName("d_h");// droite haut = bouton de fermeture
         if (ok) {
             if(dh !=null) return; // déjà fermable
-            dh = new Frame("d_h", 0, 0, 15, 15, 0xFFFFFF, 0.2);
-            this.addChild(dh);
-            dh.setTextFormat("verdana",12, 0xFF0000, TextAlign.CENTER, true);
-            dh.setCss("line-height", "9px");
+            dh = new Frame("d_h", this, 0, 0, 15, 15, 0xFFFFFF, 0.2);
+            dh.setTextFormat("calibri",13, 0x000000, TextAlign.CENTER, true);
+            dh.fmt.leading = 0.6; // remonte la croix
             dh.right = 0;
-            dh.text = "x";
+            dh.text = "x"; // ✖ = croix de fermeture &#10006
+
             dh.addEventListener("mouseover", () => { dh.background.alpha = 1.0 });
             dh.addEventListener("mouseout", () => { dh.background.alpha = 0.2 });
             dh.addEventListener("click", (f:Frame, e:MouseEvent)=> f.parentFrame.dispose());
@@ -732,8 +739,7 @@ class Frame {
         let gh: Frame = this.getChildByName("g_h");;
         if (ok) {
             if(gh !=null) return; // dééjà déplaçable
-            gh = new Frame("g_h", -6, -6, 14, 14, 0x009999, 0.4);
-            this.addChild(gh);
+            gh = new Frame("g_h", this, -6, -6, 14, 14, 0x009999, 0.4);
             gh.setBorder(1, LineStyle.SOLID, 0x000000, 0.5, 8);
             gh.addEventListener("mousedown", Frame.FrameMove);
             gh.cursor = Cursor.grab;
@@ -844,12 +850,11 @@ class Frame {
         let db: Frame = this.getChildByName("b_d");
         if (ok) {
             if(db !=null) return;
-            db = new Frame("d_b", this.width - 14, this.height - 14, 14, 14, 0xFF00FF, 0.5);
-            this.addChild(db);
+            db = new Frame("d_b", this, this.width - 14, this.height - 14, 14, 14, 0xFF00FF, 0.5);
             db.setBorder(1, LineStyle.SOLID, 0x000000, 0.5, 8);
-            db.addEventListener("mousedown", Frame.FrameResize);
+            db.setAttrs("title", "Redimensionner");
             db.cursor = Cursor.nwse_resize;
-            db.setAttrs("title", "Redimensionner le cadre");
+            db.addEventListener("mousedown", Frame.FrameResize);
         } else {
             if (db != null) db.dispose();
         }
@@ -1049,6 +1054,65 @@ class Frame {
     }
 }
 
+class Stage extends Frame {
+    constructor(bgColor:number) {
+        super("stage",document.body, 0, 0, 100, 100, bgColor, 1);
+        this.setCss("width", "100%", "height", "100%");
+    }
+}
+
+class Input extends Frame {
+    input:HTMLInputElement;
+    constructor(idInput:string, public form:Win, px:number, py:number, labelWidth:number) {
+        super(idInput, form, px, py, labelWidth, 24, 0xFFFFFF, 0);
+        this.setCss("padding", "0");
+        this.setTextFormat("verdana", 10, 0x000000, TextAlign.RIGHT);
+        this.text = idInput +" :";
+        this.input = document.createElement("input");
+        this.input.style.boxSizing = "border-box";
+        this.parent.appendChild(this.input);
+        this.input.style.position = "absolute";  
+        this.input.onblur = this.input.onchange = (e) => this.form.callback(this, e);
+    }
+}
+
+class InputText extends Input {
+    input:HTMLInputElement;
+    constructor(idInput:string, target:Win, px, py, labelWidth:number, textWidth:number, valueText:string) {
+        super(idInput, target, px, py, labelWidth);
+        this.input.style.width = textWidth + "px";
+        this.input.style.height = "24px";
+        this.input.style.left = (px + labelWidth) + "px";
+        this.input.style.top = py + "px";
+        this.input.value = valueText;
+    }
+}
+
+class Checkbox extends Input {
+    input:HTMLInputElement;
+    constructor(idInput:string, target:Win, px:number, py:number, labelWidth:number, value:boolean) {
+        super(idInput, target, px, py, labelWidth);
+        this.input.type="checkbox";
+        this.input.style.left = (px + labelWidth - 4) + "px";
+        this.input.style.top = (py + 4) + "px";
+        this.input.checked = value;
+        this.input.onclick = (e)=> {
+            this.input.value = this.input.checked.toString();
+        }
+    }
+}
+
+class Button extends Input {
+    input:HTMLInputElement;
+    constructor(idInput:string, target:Win, px:number, py:number) {
+        super(idInput, target, px, py, 0);
+        this.text = "";
+        this.input.type = "button";
+        this.input.style.left = px + "px";
+        this.input.style.top = py + "px";
+        this.input.value = idInput;
+    }
+}
 //============================================================================================================================================================
 //      W I N  : fenêtre avec titre, options de fermeture, déplacement, rediensionnement  
 //============================================================================================================================================================
@@ -1060,9 +1124,12 @@ class Win extends Frame {
     sizer:Frame;
     /** Bouton de fermeture en haut à droite */
     closer:Frame;
+    /** Fonction(obj, ev) réagissant à une commande sur la fenêtre */
+    callback:Function
     /**
      * 
      * @param idWin identifiant de la fenêtre
+     * @param target support de la fenêtre (HTMLElement ou Frame)
      * @param x position de la gauche de la fenêtre
      * @param y position du sommet de la fenêtre
      * @param w largeur de la fenêtre
@@ -1071,11 +1138,10 @@ class Win extends Frame {
      * @param borderColor couleur de la bordure
      * @param alphaVal transparence de la fenêtre
      */
-    constructor(idWin: string, x: number, y: number, w: number, h: number, bgColor: number, borderColor, alphaVal: number = 1.0) {
-        super(idWin, x, y, w, h,bgColor, alphaVal);
+    constructor(idWin: string, target:Frame|HTMLElement, x: number, y: number, w: number, h: number, bgColor: number, borderColor:number, alphaVal: number = 1.0) {
+        super(idWin, target, x, y, w, h,bgColor, alphaVal);
         this.setBorder(1, LineStyle.OUTSET, borderColor, alphaVal);
-        let title = new Frame("title", 0,0, 10, 24, 0x0000FF, 1.0);
-        this.addChild(title);
+        let title = new Frame("title", this, 0,0, 10, 24, 0x0000FF, 1.0);
         title.setTextFormat("Calibri", 12, 0xFFFFFF, TextAlign.CENTER);
         title.setBorder(2, LineStyle.OUTSET, 0xFFFFFF);
         title.setCss("width","100%");
@@ -1087,7 +1153,7 @@ class Win extends Frame {
      * @param clos la fenêtre peut-elle être fermée ?
      * @param siz la fenêtre peut-elle être redimensionnée ?
      */
-    setOptions(mov:boolean = true, clos:boolean = true, siz:boolean = true):Win {
+    setWindowOptions(mov:boolean = true, clos:boolean = true, siz:boolean = true):Win {
         let title = this.title;
         if(mov) {
             title.cursor = Cursor.grab;
@@ -1112,11 +1178,10 @@ class Win extends Frame {
         }
         
         if(clos) {
-            let closer = new Frame("close", 0,0, 20, 20, 0xFFFFFF, 0.3);
+            let closer = new Frame("close",title, 0,0, 20, 20, 0xFFFFFF, 0.3);
             closer.text = "x";
             closer.setTextFormat("calibri", 13, 0xFFFFFF, TextAlign.CENTER, true);
-            closer.setCss("line-height", "14px");
-            title.addChild(closer);
+            closer.fmt.leading = 0.8; // remonte un peu la croix (1 = hauteur normale)
             closer.right = 0;
             closer.cursor = Cursor.pointer;
             closer.addEventListener("mouseover", (c:Frame)=> {c.fmt.color = 0xFF0000});
@@ -1126,8 +1191,7 @@ class Win extends Frame {
         }
 
         if(siz) {
-            let sizer = new Frame("sizer", 0,0, 14, 14, 0x000000, 0.2);
-            this.addChild(sizer);
+            let sizer = new Frame("sizer", this, 0,0, 14, 14, 0x000000, 0.2);
             sizer.right = 0; // reste collé à droite... Eh oui :)
             sizer.bottom = 0; // reste collé en bas... Facile non ?
             sizer.cursor = Cursor.nwse_resize;
