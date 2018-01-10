@@ -111,13 +111,116 @@ enum LineStyle {
 }
 
 //============================================================================================================================================================
+//      R E C T
+//============================================================================================================================================================
+
+class Rect {
+    values: number[] = [0, 0, 0, 0];
+    /**
+     * Rectangle de délimitation de zone 
+     * @param css feuille de style associée
+     * @param px position horizontale
+     * @param py position verticale
+     * @param w largeur
+     * @param h hauteur
+     */
+    constructor(public css: CSSStyleDeclaration, px: number, py: number, w: number = 0, h: number = 0) {
+        this.setPos(px, py);
+        this.setSize(w, h);
+    }
+    /**
+     * Définition de la position
+     * @param px position horizontale
+     * @param py position verticale
+     */
+    setPos(px: number, py: number) {
+        this.x = px;
+        this.y = py;
+    }
+    /**
+     * Définition de la taille
+     * @param w largeur
+     * @param h hauteur
+     */
+    setSize(w: number, h: number) {
+        this.width = w;
+        this.height = h;
+    }
+    /**
+     * Position horizontale
+     */
+    get x(): number {
+        return this.values[0];
+    }
+    set x(value: number) {
+        this.values[0] = value;
+        this.css.left = `${value}px`;
+    }
+    /**
+     * Position verticale
+     */
+    get y(): number {
+        return this.values[1];
+    }
+    set y(value: number) {
+        this.values[1] = value;
+        this.css.top = `${value}px`;
+    }
+    /**
+     * Largeur
+     */
+    get width(): number {
+        return this.values[2];
+    }
+    set width(value: number) {
+        this.values[2] = value;
+        this.css.width = `${value}px`;
+    }
+    /**
+     * Hauteur
+     */
+    get height(): number {
+        return this.values[3];
+    }
+    set height(value: number) {
+        this.values[3] = value;
+        this.css.height = `${value}px`;
+    }
+    /**
+     * Affichage des valeurs du rectangle
+     */
+    toString(): string {
+        return `(x=${this.x}, y=${this.y})-(w=${this.width}, h=${this.height})`;
+    }
+}
+
+//============================================================================================================================================================
+//      T E X T  A L I G N (enum) left|right|center|justify|initial|inherit
+//============================================================================================================================================================
+
+enum TextAlign {
+    /** aligner à gauche */
+    LEFT = "left",
+    /** aligner au centre */
+    CENTER = "center",
+    /** Aligner à droite */
+    RIGHT = "right",
+    /** Répartir le texte sur la largeur */
+    JUSTIFY = "justify",
+    /** Alignement de base */
+    INITIAL = "initial",
+    /** Alignement du parent */
+    INHERIT = "inherit"  
+}
+
+//============================================================================================================================================================
 //      B A C K G R O U N D (color, alpha)
 //============================================================================================================================================================
 
 class Background {
     col: Color;
     /**
-     * Arrière-plan uni (couleur, transparence) de zone
+     * Arrière-plan uni (couleur, transparence, dégradé) de zone
      * @param css feuille de style associée
      * @param colorVal couleur entre 0x000000 et 0xFFFFFF
      * @param alphaVal transparence entre 0 (transparent) et 1 (opaque)
@@ -128,11 +231,22 @@ class Background {
     }
 
     /**
+     * Définit un arrière-plan en dégradé
+     * @param colors liste des couleurs du dégradé (valeurs entre 0x000000 et 0xFFFFFF)
+     * @param alphas liste des transparences dans l'ordre des couleurs (valeurs entre 0.0 et 1.0)
+     * @param ratios liste des positions dans l'ordre des couleurs (début = 0, milieu = 50, fin = 100)
+     * @param degres angle du dégradé en degrés (0:monter, 90:vers la droite, 180:descendre, 270:vers la gauche)
+     */
+    setGradient(colors:number[], alphas:number[], ratios:number[], degres:number):void {
+        let rgbas:string = colors.map((n, i)=> new Color(n, alphas[i]).rgba + ratios[i]+"%").join(",");
+        this.css.background = `linear-gradient(${degres}deg,${rgbas})`;
+    }
+    /**
      * Définition des valeurs en une passe
      * @param colorVal couleur d'arrière-plan entre 0x000000 et 0xFFFFFF
      * @param alphaVal transparence d'arrière-plan entre 0 (transparent) et 1 (opaque)
      */
-    setValues(colorVal: number, alphaVal: number = 1) {
+    setValues(colorVal: number, alphaVal: number = 1):void {
         this.color = colorVal;
         this.alpha = alphaVal;
     }
@@ -240,109 +354,6 @@ class Border {
     set thickness(value: number) {
         this.css.borderWidth = value + "px";
     }
-}
-
-//============================================================================================================================================================
-//      R E C T
-//============================================================================================================================================================
-
-class Rect {
-    values: number[] = [0, 0, 0, 0];
-    /**
-     * Rectangle de délimitation de zone 
-     * @param css feuille de style associée
-     * @param px position horizontale
-     * @param py position verticale
-     * @param w largeur
-     * @param h hauteur
-     */
-    constructor(public css: CSSStyleDeclaration, px: number, py: number, w: number = 0, h: number = 0) {
-        this.setPos(px, py);
-        this.setSize(w, h);
-    }
-    /**
-     * Définition de la position
-     * @param px position horizontale
-     * @param py position verticale
-     */
-    setPos(px: number, py: number) {
-        this.x = px;
-        this.y = py;
-    }
-    /**
-     * Définition de la taille
-     * @param w largeur
-     * @param h hauteur
-     */
-    setSize(w: number, h: number) {
-        this.width = w;
-        this.height = h;
-    }
-    /**
-     * Position horizontale
-     */
-    get x(): number {
-        return this.values[0];
-    }
-    set x(value: number) {
-        this.values[0] = value;
-        this.css.left = `${value}px`;
-    }
-    /**
-     * Position verticale
-     */
-    get y(): number {
-        return this.values[1];
-    }
-    set y(value: number) {
-        this.values[1] = value;
-        this.css.top = `${value}px`;
-    }
-    /**
-     * Largeur
-     */
-    get width(): number {
-        return this.values[2];
-    }
-    set width(value: number) {
-        this.values[2] = value;
-        this.css.width = `${value}px`;
-    }
-    /**
-     * Hauteur
-     */
-    get height(): number {
-        return this.values[3];
-    }
-    set height(value: number) {
-        this.values[3] = value;
-        this.css.height = `${value}px`;
-    }
-    /**
-     * Affichage des valeurs du rectangle
-     */
-    toString(): string {
-        return `(x=${this.x}, y=${this.y})-(w=${this.width}, h=${this.height})`;
-    }
-}
-
-//============================================================================================================================================================
-//      T E X T  A L I G N (enum) left|right|center|justify|initial|inherit
-//============================================================================================================================================================
-
-enum TextAlign {
-    /** aligner à gauche */
-    LEFT = "left",
-    /** aligner au centre */
-    CENTER = "center",
-    /** Aligner à droite */
-    RIGHT = "right",
-    /** Répartir le texte sur la largeur */
-    JUSTIFY = "justify",
-    /** Alignement de base */
-    INITIAL = "initial",
-    /** Alignement du parent */
-    INHERIT = "inherit"  
 }
 
 //============================================================================================================================================================
@@ -739,7 +750,7 @@ class Frame {
         let gh: Frame = this.getChildByName("g_h");;
         if (ok) {
             if(gh !=null) return; // dééjà déplaçable
-            gh = new Frame("g_h", this, -6, -6, 14, 14, 0x009999, 0.4);
+            gh = new Frame("g_h", this, -4, -4, 14, 14, 0x009999, 0.4);
             gh.setBorder(1, LineStyle.SOLID, 0x000000, 0.5, 8);
             gh.addEventListener("mousedown", Frame.FrameMove);
             gh.cursor = Cursor.grab;
@@ -814,11 +825,9 @@ class Frame {
     private static FrameResize(bille: Frame, e: Event): Frame {
         let f: Frame = bille.parentFrame;
         if (f == null) return;
-
         function resizeParent(e: MouseEvent) {
             f.width += e.movementX;
             f.height += e.movementY;
-            bille.setPos(f.width - 14, f.height - 14);
         }
         function releaseParent(e: MouseEvent) {
             window.removeEventListener("mousemove", resizeParent);
@@ -850,7 +859,9 @@ class Frame {
         let db: Frame = this.getChildByName("b_d");
         if (ok) {
             if(db !=null) return;
-            db = new Frame("d_b", this, this.width - 14, this.height - 14, 14, 14, 0xFF00FF, 0.5);
+            db = new Frame("d_b", this, 0, 0, 14, 14, 0xFF00FF, 0.5);
+            db.right = -3;
+            db.bottom = -3;
             db.setBorder(1, LineStyle.SOLID, 0x000000, 0.5, 8);
             db.setAttrs("title", "Redimensionner");
             db.cursor = Cursor.nwse_resize;
@@ -891,10 +902,10 @@ class Frame {
     setBorder(thickness: number, style: LineStyle, colorVal: number, alphaVal: number = 1, radiusVal: number = 0): Frame {
         this.border.setValues(thickness, style, colorVal, alphaVal, radiusVal);
         return this;
-    }  
+    }    
     /**
      * Définit les propriétés css de la div
-     * @param propVals Alternance des noms et valeurs des propriétés à modifier 
+     * @param propVals Alternance des noms et valeurs des propriétés
      */
     setCss(...propVals): Frame {
         if (this.css != null) {
@@ -1054,6 +1065,10 @@ class Frame {
     }
 }
 
+//============================================================================================================================================================
+//      S T A G E
+//============================================================================================================================================================
+
 class Stage extends Frame {
     constructor(bgColor:number) {
         super("stage",document.body, 0, 0, 100, 100, bgColor, 1);
@@ -1061,58 +1076,6 @@ class Stage extends Frame {
     }
 }
 
-class Input extends Frame {
-    input:HTMLInputElement;
-    constructor(idInput:string, public form:Win, px:number, py:number, labelWidth:number) {
-        super(idInput, form, px, py, labelWidth, 24, 0xFFFFFF, 0);
-        this.setCss("padding", "0");
-        this.setTextFormat("verdana", 10, 0x000000, TextAlign.RIGHT);
-        this.text = idInput +" :";
-        this.input = document.createElement("input");
-        this.input.style.boxSizing = "border-box";
-        this.parent.appendChild(this.input);
-        this.input.style.position = "absolute";  
-        this.input.onblur = this.input.onchange = (e) => this.form.callback(this, e);
-    }
-}
-
-class InputText extends Input {
-    input:HTMLInputElement;
-    constructor(idInput:string, target:Win, px, py, labelWidth:number, textWidth:number, valueText:string) {
-        super(idInput, target, px, py, labelWidth);
-        this.input.style.width = textWidth + "px";
-        this.input.style.height = "24px";
-        this.input.style.left = (px + labelWidth) + "px";
-        this.input.style.top = py + "px";
-        this.input.value = valueText;
-    }
-}
-
-class Checkbox extends Input {
-    input:HTMLInputElement;
-    constructor(idInput:string, target:Win, px:number, py:number, labelWidth:number, value:boolean) {
-        super(idInput, target, px, py, labelWidth);
-        this.input.type="checkbox";
-        this.input.style.left = (px + labelWidth - 4) + "px";
-        this.input.style.top = (py + 4) + "px";
-        this.input.checked = value;
-        this.input.onclick = (e)=> {
-            this.input.value = this.input.checked.toString();
-        }
-    }
-}
-
-class Button extends Input {
-    input:HTMLInputElement;
-    constructor(idInput:string, target:Win, px:number, py:number) {
-        super(idInput, target, px, py, 0);
-        this.text = "";
-        this.input.type = "button";
-        this.input.style.left = px + "px";
-        this.input.style.top = py + "px";
-        this.input.value = idInput;
-    }
-}
 //============================================================================================================================================================
 //      W I N  : fenêtre avec titre, options de fermeture, déplacement, rediensionnement  
 //============================================================================================================================================================
@@ -1124,10 +1087,8 @@ class Win extends Frame {
     sizer:Frame;
     /** Bouton de fermeture en haut à droite */
     closer:Frame;
-    /** Fonction(obj, ev) réagissant à une commande sur la fenêtre */
-    callback:Function
     /**
-     * 
+     * Fenêtre classique avec bouton de fermeture (closer), zone de titre(title) et poignée de redimensionnement(sizer)
      * @param idWin identifiant de la fenêtre
      * @param target support de la fenêtre (HTMLElement ou Frame)
      * @param x position de la gauche de la fenêtre
@@ -1142,8 +1103,9 @@ class Win extends Frame {
         super(idWin, target, x, y, w, h,bgColor, alphaVal);
         this.setBorder(1, LineStyle.OUTSET, borderColor, alphaVal);
         let title = new Frame("title", this, 0,0, 10, 24, 0x0000FF, 1.0);
+        title.background.setGradient([0xFFFFFF,0x0000FF, 0x0000FF],[1, 0.8, 1], [0, 30, 100], 180);
         title.setTextFormat("Calibri", 12, 0xFFFFFF, TextAlign.CENTER);
-        title.setBorder(2, LineStyle.OUTSET, 0xFFFFFF);
+        title.setBorder(1, LineStyle.SOLID, 0x0000FF, .4);
         title.setCss("width","100%");
         this.title = title;
     }
@@ -1221,5 +1183,144 @@ class Win extends Frame {
             
         }
         return this;
+    }
+}
+
+class Input extends Frame {
+    input:HTMLInputElement;
+    /**
+     * Zone de saisie générique dans un formulaire
+     * @param idInput identifiant et texte d'invite
+     * @param form formulaire support
+     * @param px position horizontale
+     * @param py position verticale
+     * @param labelWidth largeur de la zone d'invite
+     */
+    constructor(idInput:string, inputType:string, public form:Form, px:number, py:number, labelWidth:number) {
+        super(idInput, form, px, py, labelWidth, 24, 0xFFFFFF, 0);
+        this.setCss("padding", "0");
+        this.setTextFormat("verdana", 10, 0x000000, TextAlign.RIGHT);
+        this.setBorder(1, LineStyle.DOTTED, 0x0000FF, 10);
+        this.text = idInput + " : ";
+        this.input = document.createElement("input");
+        this.input.type = inputType;
+        this.parent.appendChild(this.input);
+        this.setInputCss("position", "absolute", "box-sizing", "border-box");
+        this.input.onchange = (e) => this.form.callback(this, e);
+        this.input.oninput = (e) => this.form.callback(this, e);
+    }
+    /**
+     * Définit les propriétés css de l'input
+     * @param propVals Alternance des noms et valeurs des propriétés à modifier 
+     */
+    setInputCss(...propVals): Frame {
+        if (this.css != null) {
+            for (let i: number = 0; i < propVals.length; i += 2) {
+                this.input.style[propVals[i]] = propVals[i + 1];
+            }
+        }
+        return this;
+    }
+    /**
+     * Définit les attributs de l'input
+     * @param propVals Alternance des noms et valeurs des propriétés à modifier 
+     */
+    setInputAttrs(...propVals): Frame {
+        if (this.css != null) {
+            for (let i: number = 0; i < propVals.length; i += 2) {
+                this.input.setAttribute(propVals[i], propVals[i + 1]);
+            }
+        }
+        return this;
+    }
+}
+
+class Form extends Win {
+    /**
+     * Réaction à chaque input 
+     */
+    callback:Function;
+    /**
+     * Formulaire avec gadgets de saisie
+     * @param idForm identifiant du formulaire
+     * @param target support du formulaire (HTMLElement ou Frame)
+     * @param x position de la gauche du formulaire
+     * @param y position du sommet du formulaire
+     * @param w largeur du formulaire
+     * @param h hauteur du formulaire
+     * @param bgColor couleur d'arrière-plan du formulaire
+     * @param borderColor couleur de la bordure du formulaire
+     * @param alphaVal transparence du formulaire (entre 0: transparent et 1:opaque)
+     */
+    constructor(idForm: string, target:Frame|HTMLElement, x: number, y: number, w: number, h: number, bgColor: number, borderColor:number, alphaVal: number = 1.0) {
+        super(idForm, target, x, y, w, h, bgColor, borderColor,alphaVal);
+    }
+    /**
+     * Ajoute une zone de saisie numerique au formulaire
+     * @param label texte de l'invite et identifiant de la zone de saisie
+     * @param px position horizontale
+     * @param py position verticale
+     * @param labelWidth largeur de la zone d'invite
+     * @param textWidth largeur de la zone de texte
+     * @param valueText contenu de la zone de texte
+     */
+    addRange(label:string, px, py, labelWidth:number, value:number, min:number, max:number):Input {
+        let range = new Input(label, "range", this, px, py, labelWidth);
+        let rangeLabel:Text = document.createTextNode(value.toString());
+        range.div.appendChild(rangeLabel);
+        range.setTextFormat("Calibri", 12, 0x000000, TextAlign.CENTER);
+        range.setInputCss("width",  "60px", "height", "24px", "left", (px + labelWidth-8) + "px", "top", py+"px");
+        range.setInputAttrs("min", min, "max", max, "value", value);
+        range.input.oninput = (e)=> {
+            rangeLabel.textContent = range.input.value;
+            range.form.callback(range, e);
+        } 
+        return range;
+    }
+    /**
+     * Ajoute une zone de saisie de texte au formulaire
+     * @param label texte de l'invite et identifiant de la zone de saisie
+     * @param px position horizontale
+     * @param py position verticale
+     * @param labelWidth largeur de la zone d'invite
+     * @param textWidth largeur de la zone de texte
+     * @param valueText contenu de la zone de texte
+     */
+    addText(label:string, px, py, labelWidth:number, textWidth:number, valueText:string):Input {
+        let txt = new Input(label, "text", this, px, py, labelWidth);
+        txt.setInputCss("width",  textWidth + "px", "height", "24px", "left", (px + labelWidth) + "px", "top", py+"px");
+        txt.input.value = valueText;
+
+        return txt;
+    }
+    /**
+     * Ajoute un bouton de formulaire (largeur automatique)
+     * @param idButton identifiant du bouton
+     * @param px position horizontale de la case à cocher
+     * @param py position verticale de la case à cocher
+     */
+    addButton(idButton:string, px:number, py:number):Input {
+        let btn = new Input(idButton, "button", this,  px,  py, 0);
+        btn.text = "";// pas de texte d'invite
+        btn.setInputCss("left", px + "px", "top", py + "px");
+        btn.input.value = idButton;
+        btn.input.onclick = (e:MouseEvent)=> this.callback(btn, e);
+        return btn;
+    }
+    /**
+     * Ajoute une case à cocher au formulaire
+     * @param idCheckbox identifiant et texte de la case à cocher
+     * @param px position horizontale de la case à cocher
+     * @param py position verticale de la case à cocher
+     * @param labelWidth largeur de la zone d'invite  de la case à cocher
+     * @param checked la case est-elle cochée ?
+     */
+    addCheck(idCheckbox:string, px:number, py:number, labelWidth:number, checked:boolean):Input {
+        let check = new Input(idCheckbox, "checkbox", this, px, py, labelWidth);
+        check.setInputCss("left", (px + labelWidth - 4) + "px", "top", (py+4)+"px");
+        check.input.checked = checked;
+        check.input.onclick = (e)=> check.input.value = check.input.checked.toString();
+        return check;
+
     }
 }

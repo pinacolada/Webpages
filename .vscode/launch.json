@@ -12,18 +12,9 @@
         },
         {
             "name": "Ouvrir dans Chrome",
+            "request": "launch",
             "type": "chrome",
-            "request": "launch",
             "file": "${workspaceFolder}/index.html"
-        },
-        {
-            "name": "Lancer Node",
-            "type": "node",
-            "request": "launch",
-            "program": "${workspaceFolder}/HelloWorld.ts",
-            "outFiles": [
-                "${workspaceFolder}/HelloWorld.js"
-            ]
         }
     ]
 }
