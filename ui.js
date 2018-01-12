@@ -120,9 +120,10 @@ class Rect {
      * @param w largeur
      * @param h hauteur
      */
-    constructor(css, px, py, w = 0, h = 0) {
-        this.css = css;
+    constructor(f, px, py, w = 0, h = 0) {
+        this.f = f;
         this.values = [0, 0, 0, 0];
+        this.css = f.css;
         this.setPos(px, py);
         this.setSize(w, h);
     }
@@ -153,6 +154,7 @@ class Rect {
     set x(value) {
         this.values[0] = value;
         this.css.left = `${value}px`;
+        this.f.dispatch("pos");
     }
     /**
      * Position verticale
@@ -163,6 +165,7 @@ class Rect {
     set y(value) {
         this.values[1] = value;
         this.css.top = `${value}px`;
+        this.f.dispatch("pos");
     }
     /**
      * Largeur
@@ -173,6 +176,7 @@ class Rect {
     set width(value) {
         this.values[2] = value;
         this.css.width = `${value}px`;
+        this.f.dispatch("siz");
     }
     /**
      * Hauteur
@@ -183,6 +187,7 @@ class Rect {
     set height(value) {
         this.values[3] = value;
         this.css.height = `${value}px`;
+        this.f.dispatch("siz");
     }
     /**
      * Affichage des valeurs du rectangle
@@ -599,7 +604,7 @@ class Frame {
         }
         this.div.appendChild(this.span);
         this.css = this.div.style;
-        this.rect = new Rect(this.css, x, y, w, h);
+        this.rect = new Rect(this, x, y, w, h);
         this.fmt = new TextFormat(this, "verdana", 12, 0x000000, TextAlign.LEFT);
         this.background = new Background(this.css, colorVal, alphaVal);
         this.border = new Border(this.css, 1, LineStyle.SOLID, colorVal, alphaVal);
@@ -651,6 +656,13 @@ class Frame {
         }
         this.listeners.push(new Listener(this, type, callback));
     }
+    bringToFront() {
+        if (this.parentFrame != null) {
+            let i = this.parentFrame.childIndex(this);
+            this.parentFrame.addChildAt(i, this);
+        }
+        return this;
+    }
     /**
      * Renvoie l'index d'une zone enfant
      * @param f Enfant dont on veut l'index
@@ -658,31 +670,8 @@ class Frame {
     childIndex(f) {
         return this.children.indexOf(f);
     }
-    /**
-     * Rend fermable la zone (affiche et active une croix de fermeture)
-     * @param ok rendre fermable ?
-     */
-    closable(ok) {
-        let dh = this.getChildByName("d_h"); // droite haut = bouton de fermeture
-        if (ok) {
-            if (dh != null)
-                return; // déjà fermable
-            dh = new Frame("d_h", this, 0, 0, 15, 15, 0xFFFFFF, 0.2);
-            dh.setTextFormat("calibri", 13, 0x000000, TextAlign.CENTER, true);
-            dh.fmt.leading = 0.6; // remonte la croix
-            dh.right = 0;
-            dh.text = "x"; // ✖ = croix de fermeture &#10006
-            dh.addEventListener("mouseover", () => { dh.background.alpha = 1.0; });
-            dh.addEventListener("mouseout", () => { dh.background.alpha = 0.2; });
-            dh.addEventListener("click", (f, e) => f.parentFrame.dispose());
-            dh.cursor = Cursor.pointer;
-            dh.setAttrs("title", "Fermer");
-        }
-        else {
-            if (dh != null)
-                dh.dispose();
-        }
-        return this;
+    dispatch(type) {
+        this.div.dispatchEvent(new Event(type));
     }
     /**
      * Détruit la zone (enlève ses enfants, ses écouteurs, son parent)
@@ -712,28 +701,6 @@ class Frame {
                 return f;
         }
         return null;
-    }
-    /**
-     * Zone déplaçable ?
-     * @param ok Faut-il rendre la zone déplaçable ?
-     */
-    movable(ok) {
-        let gh = this.getChildByName("g_h");
-        ;
-        if (ok) {
-            if (gh != null)
-                return; // dééjà déplaçable
-            gh = new Frame("g_h", this, -4, -4, 14, 14, 0x009999, 0.4);
-            gh.setBorder(1, LineStyle.SOLID, 0x000000, 0.5, 8);
-            gh.addEventListener("mousedown", Frame.FrameMove);
-            gh.cursor = Cursor.grab;
-            gh.setAttrs("title", "Déplacer le cadre");
-        }
-        else {
-            if (gh != null)
-                gh.dispose();
-        }
-        return this;
     }
     /**
      * Supprime et détruit tous les enfants
@@ -769,50 +736,6 @@ class Frame {
         }
     }
     /**
-     * Intégrer ceci à Movable !
-     * @param bille
-     * @param e
-     */
-    static FrameMove(bille, e) {
-        let f = bille.parentFrame;
-        if (f == null)
-            return;
-        bille.cursor = Cursor.grabbing;
-        function moveParent(e) {
-            f.rect.x += e.movementX;
-            f.rect.y += e.movementY;
-        }
-        function releaseParent(e) {
-            window.removeEventListener("mousemove", moveParent);
-            window.removeEventListener("mouseup", releaseParent);
-            bille.cursor = Cursor.grab;
-        }
-        window.addEventListener("mouseup", releaseParent);
-        window.addEventListener("mousemove", moveParent);
-        return f;
-    }
-    /**
-     * Intégrer ceci à resizable !
-     * @param bille
-     * @param e
-     */
-    static FrameResize(bille, e) {
-        let f = bille.parentFrame;
-        if (f == null)
-            return;
-        function resizeParent(e) {
-            f.width += e.movementX;
-            f.height += e.movementY;
-        }
-        function releaseParent(e) {
-            window.removeEventListener("mousemove", resizeParent);
-            window.removeEventListener("mouseup", releaseParent);
-        }
-        window.addEventListener("mouseup", releaseParent);
-        window.addEventListener("mousemove", resizeParent);
-        return f;
-    }
-    /**
      * Enlève une zone enfant (sans la détruire)
      * @param f zone enfant à enlever
      */
@@ -826,26 +749,9 @@ class Frame {
         }
         return null;
     }
-    /**
-     * Rend la zone redimensionnable par une poignée en bas à droite
-     * @param ok Faut-il rendre la zone redimensionnable ?
-     */
-    resizable(ok) {
-        let db = this.getChildByName("b_d");
-        if (ok) {
-            if (db != null)
-                return;
-            db = new Frame("d_b", this, 0, 0, 14, 14, 0xFF00FF, 0.5);
-            db.right = -3;
-            db.bottom = -3;
-            db.setBorder(1, LineStyle.SOLID, 0x000000, 0.5, 8);
-            db.setAttrs("title", "Redimensionner");
-            db.cursor = Cursor.nwse_resize;
-            db.addEventListener("mousedown", Frame.FrameResize);
-        }
-        else {
-            if (db != null)
-                db.dispose();
+    sendToBack() {
+        if (this.parentFrame != null) {
+            this.parentFrame.addChildAt(0, this);
         }
         return this;
     }
@@ -925,9 +831,16 @@ class Frame {
      * Position de la zone
      * @param px position horizontale gauche
      * @param py position verticale haut
+     * @param start position de départ [true:left, top | false:right:bottom]
      */
-    setPos(px, py) {
-        this.rect.setPos(px, py);
+    setPos(px, py, start) {
+        if (start) {
+            this.rect.setPos(px, py);
+        }
+        else {
+            this.right = px;
+            this.bottom = py;
+        }
         return this;
     }
     /**
@@ -965,23 +878,18 @@ class Frame {
     }
     set parent(value) {
         if (value == null) {
-            this.div.remove();
-            this.parentFrame = null;
             this.removeListeners();
+            if (this.parentFrame != null) {
+                this.parentFrame.removeChild(this);
+                this.parentFrame = null;
+            }
+            else {
+                this.div.remove();
+            }
         }
         else {
             value.appendChild(this.div);
         }
-    }
-    /**
-     * Le texte doit-il est sélectionnable ?
-     */
-    get selectable() {
-        return (this.css.userSelect == "text");
-    }
-    set selectable(value) {
-        let v = value ? "normal" : "none";
-        this.setCss("user-select", v, "-moz-user-select", v, "-webkit-user-select", v);
     }
     /**
      * Contenu textuel
@@ -1040,6 +948,137 @@ class Frame {
     set height(value) {
         this.rect.height = value;
     }
+    // C A P A C I T É S 
+    /**
+     * Rend fermable la zone (affiche et active une croix de fermeture)
+     */
+    get closable() {
+        return this.getChildByName("f_cloz") != null;
+    }
+    set closable(ok) {
+        if (this.closable === ok)
+            return;
+        let cloz;
+        if (ok) {
+            cloz = new Frame("f_cloz", this, 0, 0, 15, 15, 0xFFFFFF, 0.2);
+            cloz.setTextFormat("calibri", 13, 0x000000, TextAlign.CENTER, true);
+            cloz.fmt.leading = 0.6; // remonte la croix
+            cloz.right = 0;
+            cloz.text = "x"; // ✖ = croix de fermeture &#10006  
+            cloz.onMouseOver = () => cloz.background.alpha = 1.0;
+            cloz.onMouseOut = () => cloz.background.alpha = 0.2;
+            cloz.onClick = () => this.dispose();
+            cloz.cursor = Cursor.pointer;
+            cloz.setAttrs("title", "Fermer");
+        }
+        else {
+            cloz = this.getChildByName("f_cloz");
+            cloz.dispose();
+        }
+    }
+    /**
+     * Zone déplaçable ?
+     */
+    get movable() {
+        return this.getChildByName("f_mov") != null;
+    }
+    set movable(ok) {
+        let mover;
+        if (this.movable === ok)
+            return;
+        if (ok) {
+            // on crée la bille de mouvement
+            mover = new Frame("f_mov", this, 0, 0, 14, 14, 0x009999, 0.4);
+            mover.setBorder(1, LineStyle.SOLID, 0x000000, 0.4);
+            mover.addEventListener("mousedown", (bille, e) => {
+                let f = bille.parentFrame;
+                bille.cursor = Cursor.grabbing;
+                function moveParent(e) {
+                    f.rect.x += e.movementX;
+                    f.rect.y += e.movementY;
+                    f.dispatch("pos");
+                }
+                function releaseParent(e) {
+                    window.removeEventListener("mousemove", moveParent);
+                    window.removeEventListener("mouseup", releaseParent);
+                    bille.cursor = Cursor.grab;
+                }
+                window.addEventListener("mouseup", releaseParent);
+                window.addEventListener("mousemove", moveParent);
+            });
+            mover.cursor = Cursor.grab;
+            mover.setAttrs("title", "Déplacer");
+        }
+        else {
+            mover = this.getChildByName("f_mov");
+            mover.dispose();
+        }
+    }
+    /**
+     * Rend la zone redimensionnable par une poignée en bas à droite
+     */
+    get resizable() {
+        return this.getChildByName("f_siz") != null;
+    }
+    set resizable(ok) {
+        if (this.resizable === ok)
+            return;
+        let siz;
+        if (ok) {
+            siz = new Frame("f_siz", this, 0, 0, 12, 12, 0x000000, 0.3);
+            siz.setPos(0, 0, false);
+            siz.setAttrs("title", "Redimensionner");
+            siz.onMouseOver = () => siz.background.alpha = 0.5;
+            siz.onMouseOut = () => siz.background.alpha = 0.2;
+            siz.cursor = Cursor.nwse_resize;
+            siz.addEventListener("mousedown", (bille, e) => {
+                let f = bille.parentFrame;
+                if (f == null)
+                    return;
+                function resizeParent(e) {
+                    f.width += e.movementX;
+                    f.height += e.movementY;
+                    f.dispatch("siz");
+                }
+                function releaseParent(e) {
+                    window.removeEventListener("mousemove", resizeParent);
+                    window.removeEventListener("mouseup", releaseParent);
+                }
+                window.addEventListener("mouseup", releaseParent);
+                window.addEventListener("mousemove", resizeParent);
+            });
+        }
+        else {
+            siz = this.getChildByName("f_siz");
+            siz.dispose();
+        }
+    }
+    /**
+     * Le texte doit-il est sélectionnable ?
+     */
+    get selectable() {
+        return (this.css.userSelect == "text");
+    }
+    set selectable(value) {
+        let v = value ? "normal" : "none";
+        this.setCss("user-select", v, "-moz-user-select", v, "-webkit-user-select", v);
+    }
+    // ------------------ Ecouteurs courants ------------------ 
+    set onMouseOver(fx) {
+        this.addEventListener("mouseover", fx);
+    }
+    set onMouseOut(fx) {
+        this.addEventListener("mouseout", fx);
+    }
+    set onMouseDown(fx) {
+        this.addEventListener("mousedown", fx);
+    }
+    set onMouseUp(fx) {
+        this.addEventListener("mouseup", fx);
+    }
+    set onClick(fx) {
+        this.addEventListener("click", fx);
+    }
 }
 //============================================================================================================================================================
 //      S T A G E
@@ -1083,71 +1122,99 @@ class Win extends Frame {
      * @param siz la fenêtre peut-elle être redimensionnée ?
      */
     setWindowOptions(mov = true, clos = true, siz = true) {
-        let title = this.title;
-        if (mov) {
-            title.cursor = Cursor.grab;
-            title.addEventListener("mousedown", (titl, e) => {
-                const previousTitle = titl.text;
-                let fen = titl.parentFrame;
-                titl.cursor = Cursor.grabbing;
-                window.addEventListener("mouseup", endDragWindow);
-                window.addEventListener("mousemove", dragWindow);
-                function dragWindow(e) {
-                    fen.setPos(fen.left + e.movementX, fen.top + e.movementY);
-                    titl.text = `x:${fen.left} y:${fen.top}`;
-                }
-                function endDragWindow(e) {
-                    window.removeEventListener("mouseup", endDragWindow);
-                    window.removeEventListener("mousemove", dragWindow);
-                    title.cursor = Cursor.grab;
-                    titl.text = previousTitle;
-                }
-            });
-        }
-        if (clos) {
-            let closer = new Frame("close", title, 0, 0, 20, 20, 0xFFFFFF, 0.3);
+        this.movable = mov;
+        this.closable = clos;
+        this.resizable = siz;
+        return this;
+    }
+    get closable() {
+        return this.closer != null;
+    }
+    set closable(value) {
+        if (value == this.closable)
+            return;
+        if (value) {
+            let title = this.title, fen = this;
+            let closer = new Frame("w_clos", title, 0, 0, 20, 20, 0xFFFFFF, 0.3);
             closer.text = "x";
             closer.setTextFormat("calibri", 13, 0xFFFFFF, TextAlign.CENTER, true);
             closer.fmt.leading = 0.8; // remonte un peu la croix (1 = hauteur normale)
             closer.right = 0;
             closer.cursor = Cursor.pointer;
-            closer.addEventListener("mouseover", (c) => { c.fmt.color = 0xFF0000; });
-            closer.addEventListener("mouseout", (c) => { c.fmt.color = 0xFFFFFF; });
-            closer.addEventListener("click", (c) => { c.parentFrame.parentFrame.dispose(); });
+            closer.onMouseOver = () => closer.fmt.color = 0xFF0000;
+            closer.onMouseOut = () => closer.fmt.color = 0xFFFFFF;
+            closer.onClick = () => this.dispose();
             this.closer = closer;
         }
-        if (siz) {
-            let sizer = new Frame("sizer", this, 0, 0, 14, 14, 0x000000, 0.2);
-            sizer.right = 0; // reste collé à droite... Eh oui :)
-            sizer.bottom = 0; // reste collé en bas... Facile non ?
-            sizer.cursor = Cursor.nwse_resize;
-            sizer.addEventListener("mouseover", (s) => { s.background.alpha = 0.5; });
-            sizer.addEventListener("mouseout", (s) => { s.background.alpha = 0.2; });
-            this.sizer = sizer;
-            sizer.addEventListener("mousedown", (sz, e) => {
-                let fen = sz.parentFrame;
-                let titl = fen.getChildByName("title");
-                const previousTitle = titl.text;
-                window.addEventListener("mouseup", onEndResize);
-                window.addEventListener("mousemove", onResize);
-                function onResize(e) {
-                    fen.setSize(fen.width + e.movementX, fen.height + e.movementY);
-                    if (fen.width < 100)
-                        fen.width = 100;
-                    if (fen.height < 50)
-                        fen.height = 50;
-                    titl.text = `${fen.width} x ${fen.height}`;
-                }
-                function onEndResize(e) {
-                    window.removeEventListener("mouseup", onEndResize);
-                    window.removeEventListener("mousemove", onResize);
-                    titl.text = previousTitle;
-                }
-            });
+        else {
+            this.closer.dispose();
+            this.closer = null;
         }
-        return this;
+    }
+    get movable() {
+        return this.title.cursor === Cursor.grab;
+    }
+    set movable(value) {
+        if (value === this.movable)
+            return;
+        let title = this.title, fen = this, previousTitle;
+        title.cursor = value ? Cursor.grab : Cursor.default;
+        function startDrag(f, e) {
+            previousTitle = title.text;
+            title.cursor = Cursor.grabbing;
+            window.addEventListener("mouseup", endDragWindow);
+            window.addEventListener("mousemove", dragWindow);
+        }
+        function dragWindow(e) {
+            fen.rect.x += e.movementX;
+            fen.rect.y += e.movementY;
+            title.text = `x${fen.left}-y:${fen.top}`;
+        }
+        function endDragWindow(e) {
+            window.removeEventListener("mouseup", endDragWindow);
+            window.removeEventListener("mousemove", dragWindow);
+            title.cursor = Cursor.grab;
+            title.text = previousTitle;
+        }
+        value ?
+            title.addEventListener("mousedown", startDrag) :
+            title.removeEventListener("mousedown", startDrag);
+    }
+    get resizable() {
+        return this.sizer != null && this.sizer != undefined;
+    }
+    set resizable(value) {
+        if (value === this.resizable)
+            return;
+        let title = this.title, fen = this;
+        let siz = new Frame("w_siz", fen, 0, 0, 14, 14, 0x000000, 0.2);
+        siz.setPos(0, 0, false);
+        siz.onMouseOver = () => siz.background.alpha = 0.4;
+        siz.onMouseOut = () => siz.background.alpha = 0.2;
+        siz.cursor = Cursor.nwse_resize;
+        siz.setAttrs("title", "Redimensionner");
+        siz.addEventListener("mousedown", () => {
+            const previousTitle = title.text;
+            window.addEventListener("mouseup", endDragWindow);
+            window.addEventListener("mousemove", dragWindow);
+            function dragWindow(e) {
+                fen.rect.width = Math.max(fen.width + e.movementX, 100);
+                fen.rect.height = Math.max(fen.height + e.movementY, 50);
+                title.text = fen.rect.toString();
+            }
+            function endDragWindow(e) {
+                window.removeEventListener("mouseup", endDragWindow);
+                window.removeEventListener("mousemove", dragWindow);
+                title.cursor = Cursor.grab;
+                title.text = previousTitle;
+            }
+        });
+        this.sizer = siz;
     }
 }
+//============================================================================================================================================================
+//      I N P U T
+//============================================================================================================================================================
 class Input extends Frame {
     /**
      * Zone de saisie générique dans un formulaire
@@ -1160,9 +1227,9 @@ class Input extends Frame {
     constructor(idInput, inputType, form, px, py, labelWidth) {
         super(idInput, form, px, py, labelWidth, 24, 0xFFFFFF, 0);
         this.form = form;
-        this.setCss("padding", "0");
-        this.setTextFormat("verdana", 10, 0x000000, TextAlign.RIGHT);
-        this.setBorder(1, LineStyle.DOTTED, 0x0000FF, 10);
+        this.setCss("padding", "0", "background-color", "rgba(255,255,255,.2)");
+        this.setTextFormat("Calibri", 12, 0x000000, TextAlign.RIGHT);
+        this.fmt.marginRight = 4;
         this.text = idInput + " : ";
         this.input = document.createElement("input");
         this.input.type = inputType;
@@ -1170,6 +1237,8 @@ class Input extends Frame {
         this.setInputCss("position", "absolute", "box-sizing", "border-box");
         this.input.onchange = (e) => this.form.callback(this, e);
         this.input.oninput = (e) => this.form.callback(this, e);
+        this.addEventListener("mouseover", e => this.background.alpha = 0.4);
+        this.addEventListener("mouseout", e => this.background.alpha = 0.2);
     }
     /**
      * Définit les propriétés css de l'input
@@ -1195,7 +1264,16 @@ class Input extends Frame {
         }
         return this;
     }
+    /**
+     * La case est-elle cochée ?
+     */
+    get checked() {
+        return this.input.checked;
+    }
 }
+//============================================================================================================================================================
+//      F O R M
+//============================================================================================================================================================
 class Form extends Win {
     /**
      * Formulaire avec gadgets de saisie
@@ -1211,72 +1289,110 @@ class Form extends Win {
      */
     constructor(idForm, target, x, y, w, h, bgColor, borderColor, alphaVal = 1.0) {
         super(idForm, target, x, y, w, h, bgColor, borderColor, alphaVal);
-    }
-    /**
-     * Ajoute une zone de saisie numerique au formulaire
-     * @param label texte de l'invite et identifiant de la zone de saisie
-     * @param px position horizontale
-     * @param py position verticale
-     * @param labelWidth largeur de la zone d'invite
-     * @param textWidth largeur de la zone de texte
-     * @param valueText contenu de la zone de texte
-     */
-    addRange(label, px, py, labelWidth, value, min, max) {
-        let range = new Input(label, "range", this, px, py, labelWidth);
-        let rangeLabel = document.createTextNode(value.toString());
-        range.div.appendChild(rangeLabel);
-        range.setTextFormat("Calibri", 12, 0x000000, TextAlign.CENTER);
-        range.setInputCss("width", "60px", "height", "24px", "left", (px + labelWidth - 8) + "px", "top", py + "px");
-        range.setInputAttrs("min", min, "max", max, "value", value);
-        range.input.oninput = (e) => {
-            rangeLabel.textContent = range.input.value;
-            range.form.callback(range, e);
-        };
-        return range;
-    }
-    /**
-     * Ajoute une zone de saisie de texte au formulaire
-     * @param label texte de l'invite et identifiant de la zone de saisie
-     * @param px position horizontale
-     * @param py position verticale
-     * @param labelWidth largeur de la zone d'invite
-     * @param textWidth largeur de la zone de texte
-     * @param valueText contenu de la zone de texte
-     */
-    addText(label, px, py, labelWidth, textWidth, valueText) {
-        let txt = new Input(label, "text", this, px, py, labelWidth);
-        txt.setInputCss("width", textWidth + "px", "height", "24px", "left", (px + labelWidth) + "px", "top", py + "px");
-        txt.input.value = valueText;
-        return txt;
+        this.px = 5;
+        this.py = 25;
     }
     /**
      * Ajoute un bouton de formulaire (largeur automatique)
      * @param idButton identifiant du bouton
-     * @param px position horizontale de la case à cocher
-     * @param py position verticale de la case à cocher
      */
-    addButton(idButton, px, py) {
-        let btn = new Input(idButton, "button", this, px, py, 0);
+    addButton(idButton) {
+        let btn = new Input(idButton, "button", this, this.px, this.py, 0);
         btn.text = ""; // pas de texte d'invite
-        btn.setInputCss("left", px + "px", "top", py + "px");
+        btn.setInputCss("left", this.px + "px", "top", this.py + "px");
         btn.input.value = idButton;
         btn.input.onclick = (e) => this.callback(btn, e);
+        this.py += this.vertical;
         return btn;
     }
     /**
      * Ajoute une case à cocher au formulaire
      * @param idCheckbox identifiant et texte de la case à cocher
-     * @param px position horizontale de la case à cocher
-     * @param py position verticale de la case à cocher
      * @param labelWidth largeur de la zone d'invite  de la case à cocher
      * @param checked la case est-elle cochée ?
      */
-    addCheck(idCheckbox, px, py, labelWidth, checked) {
-        let check = new Input(idCheckbox, "checkbox", this, px, py, labelWidth);
-        check.setInputCss("left", (px + labelWidth - 4) + "px", "top", (py + 4) + "px");
+    addCheck(idCheckbox, labelWidth, checked) {
+        let check = new Input(idCheckbox, "checkbox", this, this.px, this.py, labelWidth);
+        check.setInputCss("left", (this.px + labelWidth) + "px", "top", (this.py + 4) + "px");
         check.input.checked = checked;
         check.input.onclick = (e) => check.input.value = check.input.checked.toString();
+        this.py += this.vertical;
         return check;
+    }
+    /**
+     * Ajoute une zone de saisie de texte au formulaire
+     * @param label texte de l'invite et identifiant de la zone de saisie
+     * @param labelWidth largeur de la zone d'invite
+     * @param colorHex valeur de couleur sans préfixe sur 6 caractères (rrggbb)
+     */
+    addColor(label, labelWidth, valueText) {
+        let txt = new Input(label, "text", this, this.px, this.py, labelWidth);
+        txt.setInputCss("width", "60px", "height", "24px", "left");
+        txt.setInputCss("left", (this.px + labelWidth + 4) + "px", "top", this.py + "px");
+        txt.input.value = valueText;
+        this.py += this.vertical;
+        return txt;
+    }
+    /**
+     * Ajoute une zone de saisie numerique au formulaire
+     * @param label texte de l'invite et identifiant de la zone de saisie
+     * @param labelWidth largeur de la zone d'invite
+     * @param textWidth largeur de la zone de texte
+     * @param valueText contenu de la zone de texte
+     */
+    addRange(label, labelWidth, value, min, max) {
+        let range = new Input(label, "range", this, this.px, this.py, labelWidth);
+        let rangeLabel = document.createTextNode(value.toString());
+        range.div.appendChild(rangeLabel);
+        range.setTextFormat("Calibri", 12, 0x000000, TextAlign.CENTER);
+        range.setInputCss("width", "60px", "height", "24px");
+        range.setInputCss("left", (this.px + labelWidth) + "px", "top", this.py + "px");
+        range.setInputAttrs("min", min, "max", max, "value", value);
+        range.input.oninput = (e) => {
+            rangeLabel.textContent = range.input.value;
+            range.form.callback(range, e);
+        };
+        this.py += this.vertical;
+        return range;
+    }
+    /**
+     * Ajoute une zone de saisie de texte au formulaire
+     * @param label texte de l'invite et identifiant de la zone de saisie
+     * @param labelWidth largeur de la zone d'invite
+     * @param textWidth largeur de la zone de texte
+     * @param valueText contenu de la zone de texte
+     */
+    addText(label, labelWidth, textWidth, valueText) {
+        let txt = new Input(label, "text", this, this.px, this.py, labelWidth);
+        txt.setTextFormat("Calibri", 12, 0x000000, TextAlign.RIGHT);
+        txt.setInputCss("width", textWidth + "px", "height", "24px");
+        txt.setInputCss("left", (this.px + labelWidth + 4) + "px", "top", this.py + "px");
+        txt.input.value = valueText;
+        this.py += this.vertical;
+        return txt;
+    }
+    /**
+     *  Définit la position de l'entrée
+     * @param x position horizontale de la prochaine entrée
+     * @param y position verticale de la prochaine entrée
+     * @param vertical espacement vertical entre les entrées
+     */
+    setStartPos(x, y, vertical = 24) {
+        this.px = x;
+        this.py = y;
+        this.vertical = vertical;
+        return this;
+    }
+    /**
+     * Renvoie un input retrouvé par son identifiant
+     * @param idInput identifiant de l'input recherché
+     */
+    input(idInput) {
+        for (let i of this.children) {
+            if (i instanceof Input && i.id === idInput)
+                return i;
+        }
+        return null;
     }
 }
 //# sourceMappingURL=ui.js.map

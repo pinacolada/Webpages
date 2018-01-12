@@ -63,7 +63,7 @@ enum Cursor {
     ns_resize ="ns-resize",
     nw_resize ="nw-resize",
     nwse_resize ="nwse-resize",
-    no_drop ="no-drop",
+    no_drop ="no-drop",    
     none ="none",
     not_allowed ="not-allowed",
     pointer ="pointer",
@@ -115,7 +115,9 @@ enum LineStyle {
 //============================================================================================================================================================
 
 class Rect {
+
     values: number[] = [0, 0, 0, 0];
+    css:CSSStyleDeclaration;
     /**
      * Rectangle de délimitation de zone 
      * @param css feuille de style associée
@@ -124,7 +126,8 @@ class Rect {
      * @param w largeur
      * @param h hauteur
      */
-    constructor(public css: CSSStyleDeclaration, px: number, py: number, w: number = 0, h: number = 0) {
+    constructor(public f:Frame, px: number, py: number, w: number = 0, h: number = 0) {
+        this.css = f.css;
         this.setPos(px, py);
         this.setSize(w, h);
     }
@@ -155,6 +158,7 @@ class Rect {
     set x(value: number) {
         this.values[0] = value;
         this.css.left = `${value}px`;
+        this.f.dispatch("pos");
     }
     /**
      * Position verticale
@@ -165,6 +169,7 @@ class Rect {
     set y(value: number) {
         this.values[1] = value;
         this.css.top = `${value}px`;
+        this.f.dispatch("pos");
     }
     /**
      * Largeur
@@ -175,6 +180,7 @@ class Rect {
     set width(value: number) {
         this.values[2] = value;
         this.css.width = `${value}px`;
+        this.f.dispatch("siz");
     }
     /**
      * Hauteur
@@ -185,6 +191,7 @@ class Rect {
     set height(value: number) {
         this.values[3] = value;
         this.css.height = `${value}px`;
+        this.f.dispatch("siz");          
     }
     /**
      * Affichage des valeurs du rectangle
@@ -631,7 +638,7 @@ class Frame {
         }
         this.div.appendChild(this.span);
         this.css = this.div.style;
-        this.rect = new Rect(this.css, x, y, w, h);
+        this.rect = new Rect(this, x, y, w, h);
         this.fmt = new TextFormat(this, "verdana", 12, 0x000000, TextAlign.LEFT);
         this.background = new Background(this.css, colorVal, alphaVal);
         this.border = new Border(this.css, 1, LineStyle.SOLID, colorVal, alphaVal);
@@ -683,6 +690,13 @@ class Frame {
         }
         this.listeners.push(new Listener(this, type, callback));
     } 
+    bringToFront():Frame {
+        if(this.parentFrame !=null) {
+            let i = this.parentFrame.childIndex(this);
+            this.parentFrame.addChildAt(i, this);
+        }
+        return this;
+    }
     /**
      * Renvoie l'index d'une zone enfant
      * @param f Enfant dont on veut l'index
@@ -690,30 +704,9 @@ class Frame {
     childIndex(f:Frame):number {
         return this.children.indexOf(f);
     }
-    /**
-     * Rend fermable la zone (affiche et active une croix de fermeture)
-     * @param ok rendre fermable ?
-     */
-    closable(ok:boolean): Frame {
-        let dh: Frame = this.getChildByName("d_h");// droite haut = bouton de fermeture
-        if (ok) {
-            if(dh !=null) return; // déjà fermable
-            dh = new Frame("d_h", this, 0, 0, 15, 15, 0xFFFFFF, 0.2);
-            dh.setTextFormat("calibri",13, 0x000000, TextAlign.CENTER, true);
-            dh.fmt.leading = 0.6; // remonte la croix
-            dh.right = 0;
-            dh.text = "x"; // ✖ = croix de fermeture &#10006
-
-            dh.addEventListener("mouseover", () => { dh.background.alpha = 1.0 });
-            dh.addEventListener("mouseout", () => { dh.background.alpha = 0.2 });
-            dh.addEventListener("click", (f:Frame, e:MouseEvent)=> f.parentFrame.dispose());
-            dh.cursor = Cursor.pointer;
-            dh.setAttrs("title", "Fermer");
-        } else {
-            if (dh != null) dh.dispose();
-        }
-        return this;
-    } 
+    dispatch(type:string):void {
+        this.div.dispatchEvent(new Event(type));
+    }
     /**
      * Détruit la zone (enlève ses enfants, ses écouteurs, son parent)
      */
@@ -742,24 +735,6 @@ class Frame {
         }
         return null;
     }
-    /**
-     * Zone déplaçable ?
-     * @param ok Faut-il rendre la zone déplaçable ?
-     */
-    movable(ok: boolean): Frame {
-        let gh: Frame = this.getChildByName("g_h");;
-        if (ok) {
-            if(gh !=null) return; // dééjà déplaçable
-            gh = new Frame("g_h", this, -4, -4, 14, 14, 0x009999, 0.4);
-            gh.setBorder(1, LineStyle.SOLID, 0x000000, 0.5, 8);
-            gh.addEventListener("mousedown", Frame.FrameMove);
-            gh.cursor = Cursor.grab;
-            gh.setAttrs("title", "Déplacer le cadre");
-        } else {
-            if (gh != null) gh.dispose();
-        }
-        return this;
-    }   
     /**
      * Supprime et détruit tous les enfants
      */
@@ -795,49 +770,6 @@ class Frame {
         }
     }
     /**
-     * Intégrer ceci à Movable !
-     * @param bille 
-     * @param e 
-     */
-    private static FrameMove(bille: Frame, e: MouseEvent): Frame {
-        let f: Frame = bille.parentFrame;
-        if (f == null) return;
-        bille.cursor = Cursor.grabbing;
-
-        function moveParent(e: MouseEvent) {
-            f.rect.x += e.movementX;
-            f.rect.y += e.movementY;
-        }
-        function releaseParent(e: MouseEvent) {
-            window.removeEventListener("mousemove", moveParent);
-            window.removeEventListener("mouseup", releaseParent);
-            bille.cursor = Cursor.grab;
-        }
-        window.addEventListener("mouseup", releaseParent);
-        window.addEventListener("mousemove", moveParent);
-        return f;
-    }
-    /**
-     * Intégrer ceci à resizable !
-     * @param bille 
-     * @param e 
-     */
-    private static FrameResize(bille: Frame, e: Event): Frame {
-        let f: Frame = bille.parentFrame;
-        if (f == null) return;
-        function resizeParent(e: MouseEvent) {
-            f.width += e.movementX;
-            f.height += e.movementY;
-        }
-        function releaseParent(e: MouseEvent) {
-            window.removeEventListener("mousemove", resizeParent);
-            window.removeEventListener("mouseup", releaseParent);
-        }
-        window.addEventListener("mouseup", releaseParent);
-        window.addEventListener("mousemove", resizeParent);
-        return f;
-    }
-    /**
      * Enlève une zone enfant (sans la détruire)
      * @param f zone enfant à enlever
      */
@@ -850,28 +782,13 @@ class Frame {
             return f;
         }
         return null;
-    }  
-    /**
-     * Rend la zone redimensionnable par une poignée en bas à droite
-     * @param ok Faut-il rendre la zone redimensionnable ? 
-     */
-    resizable(ok: boolean): Frame {
-        let db: Frame = this.getChildByName("b_d");
-        if (ok) {
-            if(db !=null) return;
-            db = new Frame("d_b", this, 0, 0, 14, 14, 0xFF00FF, 0.5);
-            db.right = -3;
-            db.bottom = -3;
-            db.setBorder(1, LineStyle.SOLID, 0x000000, 0.5, 8);
-            db.setAttrs("title", "Redimensionner");
-            db.cursor = Cursor.nwse_resize;
-            db.addEventListener("mousedown", Frame.FrameResize);
-        } else {
-            if (db != null) db.dispose();
+    }
+    sendToBack():Frame {
+        if(this.parentFrame !=null) {
+            this.parentFrame.addChildAt(0, this);
         }
         return this;
     }
-
     /**
      * Définit les attributs de la div sous-jascente
      * @param propVals Suite alternant des noms et des valeurs d'attributs
@@ -949,9 +866,15 @@ class Frame {
      * Position de la zone
      * @param px position horizontale gauche
      * @param py position verticale haut
+     * @param start position de départ [true:left, top | false:right:bottom]
      */
-    setPos(px: number, py: number): Frame {
-        this.rect.setPos(px, py);
+    setPos(px: number, py: number, start:boolean): Frame {
+        if(start) {
+            this.rect.setPos(px, py);
+        } else {
+            this.right = px;
+            this.bottom = py;
+        }
         return this;
     }
     /**
@@ -988,23 +911,17 @@ class Frame {
         return this.div.parentElement;
     }
     set parent(value: HTMLElement) {
-        if(value == null) {
-            this.div.remove();
-            this.parentFrame = null;
+        if (value == null) {
             this.removeListeners();
-        }else{
+            if(this.parentFrame !=null){
+                this.parentFrame.removeChild(this);
+                this.parentFrame = null;
+            } else {
+                this.div.remove();
+            }
+        } else {
             value.appendChild(this.div); 
         }
-    }
-    /**
-     * Le texte doit-il est sélectionnable ?
-     */
-    get selectable():boolean {
-        return (this.css.userSelect == "text");
-    }
-    set selectable(value:boolean) {
-        let v:string = value ? "normal" : "none";
-        this.setCss("user-select",v,"-moz-user-select", v, "-webkit-user-select", v);
     }
     /**
      * Contenu textuel
@@ -1063,6 +980,133 @@ class Frame {
     set height(value: number) {
         this.rect.height = value;
     }
+
+    // C A P A C I T É S 
+
+    /**
+     * Rend fermable la zone (affiche et active une croix de fermeture)
+     */
+    get closable():boolean {
+        return this.getChildByName("f_cloz") != null;
+    }
+    set closable(ok:boolean) {
+        if(this.closable === ok) return;
+        let cloz: Frame;
+        if (ok) {
+            cloz = new Frame("f_cloz", this, 0, 0, 15, 15, 0xFFFFFF, 0.2);
+            cloz.setTextFormat("calibri",13, 0x000000, TextAlign.CENTER, true);
+            cloz.fmt.leading = 0.6; // remonte la croix
+            cloz.right = 0;
+            cloz.text = "x"; // ✖ = croix de fermeture &#10006  
+            cloz.onMouseOver = () => cloz.background.alpha = 1.0;
+            cloz.onMouseOut = () => cloz.background.alpha = 0.2;
+            cloz.onClick = () => this.dispose();
+            cloz.cursor = Cursor.pointer;
+            cloz.setAttrs("title", "Fermer");                              
+        } else {
+            cloz = this.getChildByName("f_cloz");
+            cloz.dispose();
+        }
+    } 
+    /**
+     * Zone déplaçable ?
+     */
+    get movable():boolean {
+        return this.getChildByName("f_mov") !=null;
+    }
+    set movable(ok: boolean) {
+        let mover: Frame;
+        if(this.movable === ok) return;
+        if(ok) {
+            // on crée la bille de mouvement
+            mover = new Frame("f_mov", this, 0, 0, 14, 14, 0x009999, 0.4);
+            mover.setBorder(1, LineStyle.SOLID, 0x000000, 0.4);
+            mover.addEventListener("mousedown", (bille:Frame, e)=>{
+                let f: Frame = bille.parentFrame;
+                bille.cursor = Cursor.grabbing;
+                function moveParent(e: MouseEvent) {
+                    f.rect.x += e.movementX;
+                    f.rect.y += e.movementY;
+                    f.dispatch("pos");
+                }
+                function releaseParent(e: MouseEvent) {
+                    window.removeEventListener("mousemove", moveParent);
+                    window.removeEventListener("mouseup", releaseParent);
+                    bille.cursor = Cursor.grab;
+                }
+                window.addEventListener("mouseup", releaseParent);
+                window.addEventListener("mousemove", moveParent);
+            });
+            mover.cursor = Cursor.grab;
+            mover.setAttrs("title", "Déplacer");                 
+        } else {// on détruit la bille de mouvement et ses écoutes
+            mover = this.getChildByName("f_mov");
+            mover.dispose(); 
+        }
+    }  
+    /**
+     * Rend la zone redimensionnable par une poignée en bas à droite
+     */
+    get resizable():boolean {
+        return this.getChildByName("f_siz") !=null;
+    }
+    set resizable(ok: boolean) {
+        if(this.resizable === ok) return;
+        let siz: Frame ;
+        if (ok) {
+            siz = new Frame("f_siz", this, 0, 0, 12, 12, 0x000000, 0.3);
+            siz.setPos(0, 0, false);
+            siz.setAttrs("title", "Redimensionner");
+            siz.onMouseOver = () => siz.background.alpha = 0.5;
+            siz.onMouseOut =  () => siz.background.alpha = 0.2;
+            siz.cursor = Cursor.nwse_resize;
+            siz.addEventListener("mousedown", (bille:Frame, e:MouseEvent)=> {
+                let f: Frame = bille.parentFrame;
+                if (f == null) return;
+                function resizeParent(e: MouseEvent) {
+                    f.width += e.movementX;
+                    f.height += e.movementY;
+                    f.dispatch("siz");
+                }
+                function releaseParent(e: MouseEvent) {
+                    window.removeEventListener("mousemove", resizeParent);
+                    window.removeEventListener("mouseup", releaseParent);
+                }
+                window.addEventListener("mouseup", releaseParent);
+                window.addEventListener("mousemove", resizeParent);
+            });               
+        } else {
+            siz = this.getChildByName("f_siz");
+            siz.dispose();
+        }
+    }
+    /**
+     * Le texte doit-il est sélectionnable ?
+     */
+    get selectable():boolean {
+        return (this.css.userSelect == "text");
+    }
+    set selectable(value:boolean) {
+        let v:string = value ? "normal" : "none";
+        this.setCss("user-select",v,"-moz-user-select", v, "-webkit-user-select", v);
+    }
+
+    // ------------------ Ecouteurs courants ------------------ 
+    set onMouseOver(fx:Function) {
+        this.addEventListener("mouseover", fx);
+    }
+    set onMouseOut(fx:Function) {
+        this.addEventListener("mouseout", fx);
+    }
+    set onMouseDown(fx:Function) {
+        this.addEventListener("mousedown", fx);
+    }
+    set onMouseUp(fx:Function) {
+        this.addEventListener("mouseup", fx);
+    }
+    set onClick(fx:Function) {
+        this.addEventListener("click", fx);
+    }
 }
 
 //============================================================================================================================================================
@@ -1083,10 +1127,8 @@ class Stage extends Frame {
 class Win extends Frame {
     /** Zone de titre */
     title:Frame;
-    /** Cadre de redimensionnement en bas à droite */
-    sizer:Frame;
-    /** Bouton de fermeture en haut à droite */
     closer:Frame;
+    sizer:Frame;
     /**
      * Fenêtre classique avec bouton de fermeture (closer), zone de titre(title) et poignée de redimensionnement(sizer)
      * @param idWin identifiant de la fenêtre
@@ -1116,75 +1158,100 @@ class Win extends Frame {
      * @param siz la fenêtre peut-elle être redimensionnée ?
      */
     setWindowOptions(mov:boolean = true, clos:boolean = true, siz:boolean = true):Win {
-        let title = this.title;
-        if(mov) {
-            title.cursor = Cursor.grab;
-            title.addEventListener("mousedown", (titl:Frame, e:MouseEvent) => {
-                const previousTitle:string = titl.text;
-                let fen:Frame = titl.parentFrame;
-                titl.cursor = Cursor.grabbing;
-                window.addEventListener("mouseup", endDragWindow);
-                window.addEventListener("mousemove", dragWindow);
+        this.movable = mov;
+        this.closable = clos;
+        this.resizable = siz;
+        return this;
+    }
 
-                function dragWindow(e:MouseEvent) {
-                    fen.setPos(fen.left + e.movementX, fen.top + e.movementY);
-                    titl.text = `x:${fen.left} y:${fen.top}`;
-                } 
-                function endDragWindow(e:Event) {
-                    window.removeEventListener("mouseup", endDragWindow);
-                    window.removeEventListener("mousemove", dragWindow);
-                    title.cursor = Cursor.grab;
-                    titl.text = previousTitle;
-                }
-            });            
-        }
-        
-        if(clos) {
-            let closer = new Frame("close",title, 0,0, 20, 20, 0xFFFFFF, 0.3);
+    get closable():boolean {
+        return this.closer != null;
+    }
+    set closable(value:boolean) {
+        if(value == this.closable) return;
+        if(value) {
+            let title = this.title, fen = this;
+            let closer = new Frame("w_clos",title, 0,0, 20, 20, 0xFFFFFF, 0.3);
             closer.text = "x";
             closer.setTextFormat("calibri", 13, 0xFFFFFF, TextAlign.CENTER, true);
             closer.fmt.leading = 0.8; // remonte un peu la croix (1 = hauteur normale)
             closer.right = 0;
             closer.cursor = Cursor.pointer;
-            closer.addEventListener("mouseover", (c:Frame)=> {c.fmt.color = 0xFF0000});
-            closer.addEventListener("mouseout", (c:Frame)=> {c.fmt.color = 0xFFFFFF});
-            closer.addEventListener("click", (c:Frame)=> {c.parentFrame.parentFrame.dispose()});
-            this.closer = closer;   
+            closer.onMouseOver =() => closer.fmt.color = 0xFF0000;
+            closer.onMouseOut = () => closer.fmt.color = 0xFFFFFF;
+            closer.onClick = () => this.dispose();
+            this.closer = closer;            
+        } else {
+            this.closer.dispose();
+            this.closer = null;
         }
+    }
+    get movable():boolean {
+        return this.title.cursor === Cursor.grab;
+    }
+    set movable(value:boolean) {
+        if(value === this.movable) return;
+        let title:Frame = this.title, fen:Frame = this, previousTitle:string;
+        title.cursor = value ? Cursor.grab : Cursor.default;
 
-        if(siz) {
-            let sizer = new Frame("sizer", this, 0,0, 14, 14, 0x000000, 0.2);
-            sizer.right = 0; // reste collé à droite... Eh oui :)
-            sizer.bottom = 0; // reste collé en bas... Facile non ?
-            sizer.cursor = Cursor.nwse_resize;
-            sizer.addEventListener("mouseover", (s:Frame)=> {s.background.alpha = 0.5});
-            sizer.addEventListener("mouseout", (s:Frame)=> {s.background.alpha = 0.2});
-            this.sizer = sizer;
-
-            sizer.addEventListener("mousedown", (sz:Frame, e:MouseEvent) => {
-                let fen:Frame = sz.parentFrame;
-                let titl:Frame = fen.getChildByName("title");
-                const previousTitle:string = titl.text;
-                window.addEventListener("mouseup", onEndResize);
-                window.addEventListener("mousemove", onResize);
-
-                function onResize(e:MouseEvent) {
-                    fen.setSize(fen.width + e.movementX, fen.height + e.movementY);
-                    if(fen.width < 100) fen.width = 100;
-                    if(fen.height < 50) fen.height = 50;
-                    titl.text = `${fen.width} x ${fen.height}`;
-                } 
-                function onEndResize(e:Event) {
-                    window.removeEventListener("mouseup", onEndResize);
-                    window.removeEventListener("mousemove", onResize);
-                    titl.text = previousTitle;
-                }
-            });
-            
+        function startDrag(f:Frame, e:Event) {
+            previousTitle = title.text;
+            title.cursor = Cursor.grabbing;
+            window.addEventListener("mouseup", endDragWindow);
+            window.addEventListener("mousemove", dragWindow);            
         }
-        return this;
+        function dragWindow(e:MouseEvent){
+            fen.rect.x += e.movementX;
+            fen.rect.y += e.movementY;
+            title.text = `x${fen.left}-y:${fen.top}`;
+        }
+        function endDragWindow(e:Event) {
+            window.removeEventListener("mouseup", endDragWindow);
+            window.removeEventListener("mousemove", dragWindow);
+            title.cursor = Cursor.grab;
+            title.text = previousTitle;
+        }
+        value ? 
+            title.addEventListener ("mousedown", startDrag) : 
+            title.removeEventListener ("mousedown", startDrag);         
+    }
+    get resizable():boolean {
+        return this.sizer !=null && this.sizer !=undefined;
+    }
+    set resizable(value:boolean) {
+        if(value === this.resizable) return;
+
+        let title = this.title, fen = this;
+        let siz = new Frame("w_siz", fen, 0,0, 14, 14, 0x000000, 0.2);
+        siz.setPos(0, 0, false);
+        siz.onMouseOver = ()=> siz.background.alpha = 0.4;
+        siz.onMouseOut = ()=> siz.background.alpha = 0.2;
+        siz.cursor = Cursor.nwse_resize;
+        siz.setAttrs("title", "Redimensionner");
+        siz.addEventListener("mousedown", () => {
+            const previousTitle:string = title.text;
+            window.addEventListener("mouseup", endDragWindow);
+            window.addEventListener("mousemove", dragWindow);
+
+            function dragWindow(e:MouseEvent) {
+                fen.rect.width = Math.max(fen.width +e.movementX, 100);
+                fen.rect.height = Math.max(fen.height +e.movementY, 50);
+                title.text = fen.rect.toString();
+            }
+            function endDragWindow(e:Event) {
+                window.removeEventListener("mouseup", endDragWindow);
+                window.removeEventListener("mousemove", dragWindow);
+                title.cursor = Cursor.grab;
+                title.text = previousTitle;
+            }
+        });
+        this.sizer = siz;
     }
 }
+
+//============================================================================================================================================================
+//      I N P U T
+//============================================================================================================================================================
 
 class Input extends Frame {
     input:HTMLInputElement;
@@ -1198,9 +1265,9 @@ class Input extends Frame {
      */
     constructor(idInput:string, inputType:string, public form:Form, px:number, py:number, labelWidth:number) {
         super(idInput, form, px, py, labelWidth, 24, 0xFFFFFF, 0);
-        this.setCss("padding", "0");
-        this.setTextFormat("verdana", 10, 0x000000, TextAlign.RIGHT);
-        this.setBorder(1, LineStyle.DOTTED, 0x0000FF, 10);
+        this.setCss("padding", "0", "background-color","rgba(255,255,255,.2)");
+        this.setTextFormat("Calibri", 12, 0x000000, TextAlign.RIGHT);
+        this.fmt.marginRight = 4;
         this.text = idInput + " : ";
         this.input = document.createElement("input");
         this.input.type = inputType;
@@ -1208,6 +1275,8 @@ class Input extends Frame {
         this.setInputCss("position", "absolute", "box-sizing", "border-box");
         this.input.onchange = (e) => this.form.callback(this, e);
         this.input.oninput = (e) => this.form.callback(this, e);
+        this.addEventListener("mouseover", e=> this.background.alpha=0.4);
+        this.addEventListener("mouseout", e=> this.background.alpha=0.2);
     }
     /**
      * Définit les propriétés css de l'input
@@ -1233,13 +1302,26 @@ class Input extends Frame {
         }
         return this;
     }
+    /**
+     * La case est-elle cochée ?
+     */
+    get checked():boolean {
+        return this.input.checked;
+    }
 }
+
+//============================================================================================================================================================
+//      F O R M
+//============================================================================================================================================================
 
 class Form extends Win {
     /**
      * Réaction à chaque input 
      */
     callback:Function;
+    px:number = 5;
+    py:number = 25;
+    vertical:number;
     /**
      * Formulaire avec gadgets de saisie
      * @param idForm identifiant du formulaire
@@ -1256,71 +1338,105 @@ class Form extends Win {
         super(idForm, target, x, y, w, h, bgColor, borderColor,alphaVal);
     }
     /**
-     * Ajoute une zone de saisie numerique au formulaire
-     * @param label texte de l'invite et identifiant de la zone de saisie
-     * @param px position horizontale
-     * @param py position verticale
-     * @param labelWidth largeur de la zone d'invite
-     * @param textWidth largeur de la zone de texte
-     * @param valueText contenu de la zone de texte
-     */
-    addRange(label:string, px, py, labelWidth:number, value:number, min:number, max:number):Input {
-        let range = new Input(label, "range", this, px, py, labelWidth);
-        let rangeLabel:Text = document.createTextNode(value.toString());
-        range.div.appendChild(rangeLabel);
-        range.setTextFormat("Calibri", 12, 0x000000, TextAlign.CENTER);
-        range.setInputCss("width",  "60px", "height", "24px", "left", (px + labelWidth-8) + "px", "top", py+"px");
-        range.setInputAttrs("min", min, "max", max, "value", value);
-        range.input.oninput = (e)=> {
-            rangeLabel.textContent = range.input.value;
-            range.form.callback(range, e);
-        } 
-        return range;
-    }
-    /**
-     * Ajoute une zone de saisie de texte au formulaire
-     * @param label texte de l'invite et identifiant de la zone de saisie
-     * @param px position horizontale
-     * @param py position verticale
-     * @param labelWidth largeur de la zone d'invite
-     * @param textWidth largeur de la zone de texte
-     * @param valueText contenu de la zone de texte
-     */
-    addText(label:string, px, py, labelWidth:number, textWidth:number, valueText:string):Input {
-        let txt = new Input(label, "text", this, px, py, labelWidth);
-        txt.setInputCss("width",  textWidth + "px", "height", "24px", "left", (px + labelWidth) + "px", "top", py+"px");
-        txt.input.value = valueText;
-
-        return txt;
-    }
-    /**
      * Ajoute un bouton de formulaire (largeur automatique)
      * @param idButton identifiant du bouton
-     * @param px position horizontale de la case à cocher
-     * @param py position verticale de la case à cocher
      */
-    addButton(idButton:string, px:number, py:number):Input {
-        let btn = new Input(idButton, "button", this,  px,  py, 0);
+    addButton(idButton:string):Input {
+        let btn = new Input(idButton, "button", this,  this.px,  this.py, 0);
         btn.text = "";// pas de texte d'invite
-        btn.setInputCss("left", px + "px", "top", py + "px");
+        btn.setInputCss("left", this.px + "px", "top", this.py + "px");
         btn.input.value = idButton;
         btn.input.onclick = (e:MouseEvent)=> this.callback(btn, e);
+        this.py +=this.vertical;
         return btn;
     }
     /**
      * Ajoute une case à cocher au formulaire
      * @param idCheckbox identifiant et texte de la case à cocher
-     * @param px position horizontale de la case à cocher
-     * @param py position verticale de la case à cocher
      * @param labelWidth largeur de la zone d'invite  de la case à cocher
      * @param checked la case est-elle cochée ?
      */
-    addCheck(idCheckbox:string, px:number, py:number, labelWidth:number, checked:boolean):Input {
-        let check = new Input(idCheckbox, "checkbox", this, px, py, labelWidth);
-        check.setInputCss("left", (px + labelWidth - 4) + "px", "top", (py+4)+"px");
+    addCheck(idCheckbox:string, labelWidth:number, checked:boolean):Input {
+        let check = new Input(idCheckbox, "checkbox", this, this.px, this.py, labelWidth);
+        check.setInputCss("left", (this.px + labelWidth) + "px", "top", (this.py+4)+"px");
         check.input.checked = checked;
         check.input.onclick = (e)=> check.input.value = check.input.checked.toString();
+        this.py +=this.vertical;
         return check;
+    }
+    /**
+     * Ajoute une zone de saisie de texte au formulaire
+     * @param label texte de l'invite et identifiant de la zone de saisie
+     * @param labelWidth largeur de la zone d'invite
+     * @param colorHex valeur de couleur sans préfixe sur 6 caractères (rrggbb)
+     */
+    addColor(label:string, labelWidth:number, valueText:string):Input {
+        let txt = new Input(label, "text", this, this.px, this.py, labelWidth);
+        txt.setInputCss("width",  "60px", "height", "24px", "left");
+        txt.setInputCss("left", (this.px + labelWidth + 4) + "px", "top", this.py + "px");
+        txt.input.value = valueText;
+        this.py +=this.vertical;
+        return txt;
+    }
+    /**
+     * Ajoute une zone de saisie numerique au formulaire
+     * @param label texte de l'invite et identifiant de la zone de saisie
+     * @param labelWidth largeur de la zone d'invite
+     * @param textWidth largeur de la zone de texte
+     * @param valueText contenu de la zone de texte
+     */
+    addRange(label:string, labelWidth:number, value:number, min:number, max:number):Input {
+        let range = new Input(label, "range", this, this.px, this.py, labelWidth);
+        let rangeLabel:Text = document.createTextNode(value.toString());
+        range.div.appendChild(rangeLabel);
+        range.setTextFormat("Calibri", 12, 0x000000, TextAlign.CENTER);
+        range.setInputCss("width", "60px", "height", "24px")
+        range.setInputCss("left", (this.px + labelWidth) + "px", "top", this.py + "px");
+        range.setInputAttrs("min", min, "max", max, "value", value);
+        range.input.oninput = (e)=> {
+            rangeLabel.textContent = range.input.value;
+            range.form.callback(range, e);
+        } 
+        this.py +=this.vertical;
+        return range;
+    }
+    /**
+     * Ajoute une zone de saisie de texte au formulaire
+     * @param label texte de l'invite et identifiant de la zone de saisie
+     * @param labelWidth largeur de la zone d'invite
+     * @param textWidth largeur de la zone de texte
+     * @param valueText contenu de la zone de texte
+     */
+    addText(label:string, labelWidth:number, textWidth:number, valueText:string):Input {
+        let txt = new Input(label, "text", this, this.px, this.py, labelWidth);
+        txt.setTextFormat("Calibri", 12, 0x000000, TextAlign.RIGHT);
+        txt.setInputCss("width",  textWidth + "px", "height", "24px");
+        txt.setInputCss("left", (this.px + labelWidth + 4) + "px", "top", this.py+"px");
+        txt.input.value = valueText;
+        this.py +=this.vertical;
+        return txt;
+    }
+    /**
+     *  Définit la position de l'entrée
+     * @param x position horizontale de la prochaine entrée
+     * @param y position verticale de la prochaine entrée
+     * @param vertical espacement vertical entre les entrées
+     */
+    setStartPos(x:number, y:number, vertical:number=24):Form {
+        this.px = x;
+        this.py = y;
+        this.vertical = vertical;
+        return this;
+    }
 
+    /**
+     * Renvoie un input retrouvé par son identifiant
+     * @param idInput identifiant de l'input recherché
+     */
+    input(idInput:string):Input {
+        for(let i of this.children) {
+            if(i instanceof Input && i.id === idInput) return i;
+        }
+        return null;
     }
 }
