@@ -62,7 +62,7 @@ menu.callback = (i, e) => {
     }
     vue.text = "Je suis une 'Frame' " +
         (menu.input("Déplacer").checked ? "déplaçable, " : "immobile, ") +
-        (menu.input("Fermer").checked ? "refermable et " : "fixe et ") +
+        (menu.input("Fermer").checked ? "refermable et " : "inamovible et ") +
         (menu.input("Tailler").checked ? "redimensionnable." : "de taille fixe.");
 };
 menu.setStartPos(5, 30, 30);

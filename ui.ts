@@ -1163,7 +1163,9 @@ class Win extends Frame {
         this.resizable = siz;
         return this;
     }
-
+    /**
+     * Peut-on refermer la fenêtre ?
+     */
     get closable():boolean {
         return this.closer != null;
     }
@@ -1186,6 +1188,9 @@ class Win extends Frame {
             this.closer = null;
         }
     }
+    /**
+     * Peut-on déplacer la fenêtre ?
+     */
     get movable():boolean {
         return this.title.cursor === Cursor.grab;
     }
@@ -1215,6 +1220,9 @@ class Win extends Frame {
             title.addEventListener ("mousedown", startDrag) : 
             title.removeEventListener ("mousedown", startDrag);         
     }
+    /**
+     * Peut-on redimensionner la fenêtre ?
+     */
     get resizable():boolean {
         return this.sizer !=null && this.sizer !=undefined;
     }
